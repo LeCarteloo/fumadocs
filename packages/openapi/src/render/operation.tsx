@@ -38,12 +38,14 @@ export function Operation({
   method,
   ctx,
   hasHead,
+  customDescription,
 }: {
   baseUrls: string[];
   path: string;
   method: MethodInformation;
   ctx: RenderContext;
   hasHead?: boolean;
+  customDescription?: ReactNode[];
 }): ReactElement {
   let level = 2;
   const body = noRef(method.requestBody);
@@ -68,7 +70,18 @@ export function Operation({
 
   info.push(
     <Playground key="playground" path={path} method={method} ctx={ctx} />,
+    <div className="prose scroll-m-28 mt-8 mb-4">
+      {customDescription}
+    </div>,
   );
+
+  if(customDescription) {
+    info.push(
+      <div className="prose scroll-m-28 mt-8 mb-4">
+        {customDescription}
+      </div>,
+    );
+  }
 
   if (security) {
     info.push(heading(level, 'Authorization', ctx));

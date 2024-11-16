@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { type OpenAPIV3 as OpenAPI } from 'openapi-types';
 import Slugger from 'github-slugger';
 import Parser from '@apidevtools/json-schema-ref-parser';
@@ -20,7 +20,7 @@ export interface ApiPageProps
   operations: Operation[];
   hasHead: boolean;
   renderer?: Partial<Renderer>;
-
+  children?: ReactNode[];
   disableCache?: boolean;
 }
 
@@ -32,7 +32,7 @@ export interface Operation {
 }
 
 export async function APIPage(props: ApiPageProps): Promise<ReactElement> {
-  const { operations, hasHead = true } = props;
+  const { operations, hasHead = true, children } = props;
   let document: OpenAPI.Document;
 
   if (typeof props.document === 'string' && !props.disableCache) {
@@ -65,6 +65,7 @@ export async function APIPage(props: ApiPageProps): Promise<ReactElement> {
             baseUrls={
               document.servers ? document.servers.map((s) => s.url) : []
             }
+            customDescription={children}
             hasHead={hasHead}
           />
         );
