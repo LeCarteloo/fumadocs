@@ -82,6 +82,8 @@ export interface APIPlaygroundProps {
   header?: PrimitiveRequestField[];
   body?: RequestSchema;
   schemas: Record<string, RequestSchema>;
+  onQueryFinish?: (data: Response) => void;
+  renderResult?: boolean;
 }
 
 export function Playground({

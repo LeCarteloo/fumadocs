@@ -60,6 +60,8 @@ export function APIPlayground({
   body,
   fields = {},
   schemas,
+  onQueryFinish,
+  renderResult,
 }: APIPlaygroundProps & {
   fields?: {
     auth?: CustomField<'authorization', PrimitiveRequestField>;
@@ -116,6 +118,8 @@ export function APIPlayground({
       headers,
       body: bodyValue,
     });
+    
+    if(onQueryFinish) onQueryFinish(response);  
 
     const data: unknown = await response.json().catch(() => undefined);
 
@@ -266,8 +270,8 @@ export function APIPlayground({
             ) : null}
           </Accordions>
 
-          {testQuery.data ? <ResultDisplay data={testQuery.data} /> : null}
         </form>
+        {testQuery.data && renderResult ? <ResultDisplay data={testQuery.data} /> : null}
       </SchemaContext.Provider>
     </Form>
   );
