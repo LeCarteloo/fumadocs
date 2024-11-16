@@ -70,9 +70,6 @@ export function Operation({
 
   info.push(
     <Playground key="playground" path={path} method={method} ctx={ctx} />,
-    <div className="prose scroll-m-28 mt-8 mb-4">
-      {customDescription}
-    </div>,
   );
 
   if(customDescription) {
