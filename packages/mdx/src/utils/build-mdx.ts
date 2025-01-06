@@ -1,10 +1,10 @@
 import { createProcessor, type ProcessorOptions } from '@mdx-js/mdx';
 import type { VFile } from 'vfile';
+import { remarkInclude } from '@/mdx-plugins/remark-include';
 
-const cache = new Map<
-  string,
-  { processor: ReturnType<typeof createProcessor>; configHash: string }
->();
+type Processor = ReturnType<typeof createProcessor>;
+
+const cache = new Map<string, { processor: Processor; configHash: string }>();
 
 export interface MDXOptions extends ProcessorOptions {
   /**
@@ -23,10 +23,25 @@ export interface MDXOptions extends ProcessorOptions {
    * Custom Vfile data
    */
   data?: Record<string, unknown>;
+
+  _compiler?: CompilerOptions;
+}
+
+interface CompilerOptions {
+  addDependency: (file: string) => void;
 }
 
 function cacheKey(group: string, format: string): string {
   return `${group}:${format}`;
+}
+
+declare module 'vfile' {
+  interface DataMap {
+    /**
+     * The compiler object from loader
+     */
+    _compiler?: CompilerOptions;
+  }
 }
 
 /**
@@ -58,6 +73,7 @@ export function buildMDX(
         outputFormat: 'program',
         development: process.env.NODE_ENV === 'development',
         ...rest,
+        remarkPlugins: [remarkInclude, ...(rest.remarkPlugins ?? [])],
         format,
       }),
 
@@ -73,6 +89,7 @@ export function buildMDX(
     data: {
       ...data,
       frontmatter,
+      _compiler: options._compiler,
     },
   });
 }

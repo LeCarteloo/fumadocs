@@ -21,11 +21,11 @@ import { Callout } from 'fumadocs-ui/components/callout';
 import { TypeTable } from 'fumadocs-ui/components/type-table';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import * as Preview from '@/components/preview';
-import { createMetadata } from '@/utils/metadata';
-import { openapi, source } from '@/app/source';
+import { createMetadata } from '@/lib/metadata';
+import { openapi, source } from '@/lib/source';
 import { Wrapper } from '@/components/preview/wrapper';
 import { AutoTypeTable } from '@/components/type-table';
-import { metadataImage } from '@/utils/metadata-image';
+import { metadataImage } from '@/lib/metadata-image';
 
 function PreviewRenderer({ preview }: { preview: string }): ReactNode {
   if (preview && preview in Preview) {
@@ -35,6 +35,9 @@ function PreviewRenderer({ preview }: { preview: string }): ReactNode {
 
   return null;
 }
+
+export const dynamicParams = false;
+export const revalidate = false;
 
 export default async function Page(props: {
   params: Promise<{ slug: string[] }>;
@@ -63,10 +66,13 @@ export default async function Page(props: {
         sha: 'dev',
         path,
       }}
+      article={{
+        className: 'max-sm:pb-16',
+      }}
     >
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
-      <DocsBody>
+      <DocsBody className="text-fd-foreground/80">
         {preview ? <PreviewRenderer preview={preview} /> : null}
         <Mdx
           components={{

@@ -87,7 +87,7 @@ export function BaseUrlSelect({ baseUrls }: { baseUrls: string[] }) {
       <select
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
-        className="min-w-0 flex-1 bg-transparent font-mono text-xs text-fd-foreground outline-none"
+        className="min-w-0 flex-1 bg-transparent text-xs text-fd-foreground outline-none"
       >
         {baseUrls.map((url) => (
           <option key={url} value={url}>

@@ -1,12 +1,16 @@
-import type { OpenAPIV3 as OpenAPI } from 'openapi-types';
 import { Fragment, type ReactElement, type ReactNode } from 'react';
-import { generateSample, type EndpointSample } from '@/schema/sample';
+import { generateSample, type EndpointSample } from '@/utils/generate-sample';
 import * as CURL from '@/requests/curl';
 import * as JS from '@/requests/javascript';
 import * as Go from '@/requests/go';
 import * as Python from '@/requests/python';
-import { type MethodInformation, type RenderContext } from '@/types';
-import { noRef, getPreferredType } from '@/utils/schema';
+import {
+  type MethodInformation,
+  OperationObject,
+  type RenderContext,
+  type SecurityRequirementObject,
+} from '@/types';
+import { getPreferredType, NoReference } from '@/utils/schema';
 import { getTypescriptSchema } from '@/utils/get-typescript-schema';
 import { getSecurities, getSecurityPrefix } from '@/utils/get-security';
 import { Playground } from '@/render/playground';
@@ -15,6 +19,8 @@ import { type ResponseTypeProps } from '@/render/renderer';
 import { Markdown } from './markdown';
 import { heading } from './heading';
 import { Schema } from './schema';
+import { createMethod } from '@/server/create-method';
+import { methodKeys } from '@/build-routes';
 
 interface CustomProperty {
   'x-codeSamples'?: CodeSample[];
@@ -33,56 +39,43 @@ interface CodeSampleCompiled {
 }
 
 export function Operation({
-  baseUrls,
+  type = 'operation',
   path,
   method,
   ctx,
   hasHead,
+  headingLevel = 2,
   customDescription,
 }: {
-  baseUrls: string[];
+  type?: 'webhook' | 'operation';
   path: string;
   method: MethodInformation;
   ctx: RenderContext;
   hasHead?: boolean;
   customDescription?: ReactNode[];
+  headingLevel?: number;
 }): ReactElement {
-  let level = 2;
-  const body = noRef(method.requestBody);
+  const { baseUrls } = ctx;
+  const body = method.requestBody;
   const security = method.security ?? ctx.document.security;
-  const info: ReactNode[] = [];
+  let headNode: ReactNode = null;
+  let bodyNode: ReactNode = null;
+  let callbacksNode: ReactNode = null;
 
   if (hasHead) {
-    info.push(
-      heading(
-        level,
-        method.summary ??
-          (method.operationId ? idToTitle(method.operationId) : path),
-        ctx,
-      ),
+    const title =
+      method.summary ??
+      (method.operationId ? idToTitle(method.operationId) : path);
+
+    headNode = (
+      <>
+        {heading(headingLevel, title, ctx)}
+        {method.description ? (
+          <Markdown key="description" text={method.description} />
+        ) : null}
+      </>
     );
-    level++;
-
-    if (method.description) {
-      info.push(<Markdown key="description" text={method.description} />);
-    }
-  }
-
-  info.push(
-    <Playground key="playground" path={path} method={method} ctx={ctx} />,
-  );
-
-  if(customDescription) {
-    info.push(
-      <div className="prose scroll-m-28 mt-8 mb-4">
-        {customDescription}
-      </div>,
-    );
-  }
-
-  if (security) {
-    info.push(heading(level, 'Authorization', ctx));
-    info.push(<AuthSection key="auth" requirements={security} ctx={ctx} />);
+    headingLevel++;
   }
 
   if (body) {
@@ -90,9 +83,9 @@ export function Operation({
     if (!type)
       throw new Error(`No supported media type for body content: ${path}`);
 
-    info.push(
-      <Fragment key="body">
-        {heading(level, 'Request Body', ctx)}
+    bodyNode = (
+      <>
+        {heading(headingLevel, 'Request Body', ctx)}
         <div className="mb-8 flex flex-row items-center justify-between gap-2">
           <code>{type}</code>
           <span>{body.required ? 'Required' : 'Optional'}</span>
@@ -100,7 +93,7 @@ export function Operation({
         {body.description ? <Markdown text={body.description} /> : null}
         <Schema
           name="body"
-          schema={noRef(body.content[type].schema ?? {})}
+          schema={body.content[type].schema ?? {}}
           ctx={{
             readOnly: method.method === 'GET',
             writeOnly: method.method !== 'GET',
@@ -109,18 +102,19 @@ export function Operation({
             allowFile: type === 'multipart/form-data',
           }}
         />
-      </Fragment>,
+      </>
     );
   }
 
   const parameterGroups = new Map<string, ReactNode[]>();
   const endpoint = generateSample(path, method, ctx);
 
-  for (const param of method.parameters) {
+  for (const param of method.parameters ?? []) {
     const pInfo = endpoint.parameters.find(
       (item) => item.name === param.name && item.in === param.in,
     );
     if (!pInfo) continue;
+
     const schema = pInfo.schema;
     const groupName =
       {
@@ -153,22 +147,84 @@ export function Operation({
     parameterGroups.set(groupName, group);
   }
 
-  for (const [group, parameters] of Array.from(parameterGroups.entries())) {
-    info.push(heading(level, group, ctx), ...parameters);
+  if (method.callbacks) {
+    callbacksNode = (
+      <>
+        {heading(headingLevel, 'Webhooks', ctx)}
+        {Object.entries(method.callbacks).map(([name, callback]) => {
+          const nodes = Object.entries(callback).map(([path, pathItem]) => {
+            const pathNodes = methodKeys.map((method) => {
+              const operation = pathItem[method];
+              if (!operation) return null;
+
+              return (
+                <Operation
+                  key={method}
+                  type="webhook"
+                  hasHead
+                  path={path}
+                  headingLevel={headingLevel + 1}
+                  method={createMethod(
+                    method,
+                    pathItem,
+                    operation as NoReference<OperationObject>,
+                  )}
+                  ctx={ctx}
+                />
+              );
+            });
+
+            return <Fragment key={path}>{pathNodes}</Fragment>;
+          });
+
+          return <Fragment key={name}>{nodes}</Fragment>;
+        })}
+      </>
+    );
   }
 
-  return (
-    <ctx.renderer.API>
-      <ctx.renderer.APIInfo
-        method={method.method}
-        route={path}
-        baseUrls={baseUrls}
-      >
-        {info}
-      </ctx.renderer.APIInfo>
-      <APIExample method={method} endpoint={endpoint} ctx={ctx} />
-    </ctx.renderer.API>
+  const info = (
+    <ctx.renderer.APIInfo
+      head={headNode}
+      method={method.method}
+      route={path}
+      baseUrls={type === 'operation' ? baseUrls : []}
+    >
+      {type === 'operation' ? (
+        <Playground path={path} method={method} ctx={ctx} />
+      ) : null}
+      {customDescription ? (
+        <span>{customDescription}</span>
+      ) : null}
+      {security ? (
+        <>
+          {heading(headingLevel, 'Authorization', ctx)}
+          <AuthSection requirements={security} ctx={ctx} />
+        </>
+      ) : null}
+      {bodyNode}
+      {Array.from(parameterGroups.entries()).map(([group, params]) => {
+        return (
+          <Fragment key={group}>
+            {heading(headingLevel, group, ctx)}
+            {params}
+          </Fragment>
+        );
+      })}
+      {callbacksNode}
+    </ctx.renderer.APIInfo>
   );
+
+  if (type === 'operation') {
+    return (
+      <ctx.renderer.API>
+        {info}
+        <APIExample method={method} endpoint={endpoint} ctx={ctx} />
+      </ctx.renderer.API>
+    );
+  } else {
+    return info;
+  }
 }
 
 const defaultSamples: CodeSample[] = [
@@ -202,7 +258,7 @@ async function APIExample({
   method: MethodInformation;
   endpoint: EndpointSample;
   ctx: RenderContext;
-}): Promise<ReactElement> {
+}) {
   const renderer = ctx.renderer;
   const children: ReactNode[] = [];
 
@@ -272,7 +328,7 @@ function AuthSection({
   ctx: { document, renderer },
   requirements,
 }: {
-  requirements: OpenAPI.SecurityRequirementObject[];
+  requirements: SecurityRequirementObject[];
   ctx: RenderContext;
 }): ReactNode {
   let id = 0;
@@ -281,6 +337,12 @@ function AuthSection({
   for (const requirement of requirements) {
     for (const schema of getSecurities(requirement, document)) {
       const prefix = getSecurityPrefix(schema);
+      const scopeElement =
+        schema.scopes.length > 0 ? (
+          <p>
+            Scope: <code>{schema.scopes.join(', ')}</code>
+          </p>
+        ) : null;
 
       if (schema.type === 'http') {
         info.push(
@@ -293,6 +355,7 @@ function AuthSection({
             {schema.description ? <Markdown text={schema.description} /> : null}
             <p>
               In: <code>header</code>
+              {scopeElement}
             </p>
           </renderer.Property>,
         );
@@ -310,11 +373,7 @@ function AuthSection({
             <p>
               In: <code>header</code>
             </p>
-            {schema.scopes.length > 0 ? (
-              <p>
-                Scope: <code>{schema.scopes.join(', ')}</code>
-              </p>
-            ) : null}
+            {scopeElement}
           </renderer.Property>,
         );
       }
@@ -325,6 +384,7 @@ function AuthSection({
             {schema.description ? <Markdown text={schema.description} /> : null}
             <p>
               In: <code>{schema.in}</code>
+              {scopeElement}
             </p>
           </renderer.Property>,
         );
@@ -338,6 +398,7 @@ function AuthSection({
             required
           >
             {schema.description ? <Markdown text={schema.description} /> : null}
+            {scopeElement}
           </renderer.Property>,
         );
       }
@@ -350,18 +411,19 @@ function AuthSection({
 async function ResponseTabs({
   endpoint,
   operation,
-  ctx: { renderer, generateTypeScriptSchema },
+  ctx: { renderer, generateTypeScriptSchema, dereferenceMap },
 }: {
   endpoint: EndpointSample;
-  operation: OpenAPI.OperationObject;
+  operation: MethodInformation;
   ctx: RenderContext;
 }): Promise<ReactElement | null> {
   const items: string[] = [];
   const children: ReactNode[] = [];
 
+  if (!operation.responses) return null;
   for (const code of Object.keys(operation.responses)) {
     const types: ResponseTypeProps[] = [];
-    let description = noRef(operation.responses[code]).description;
+    let description = operation.responses[code].description;
 
     if (!description && code in endpoint.responses)
       description = endpoint.responses[code].schema.description ?? '';
@@ -378,7 +440,7 @@ async function ResponseTabs({
     if (generateTypeScriptSchema) {
       ts = await generateTypeScriptSchema(endpoint, code);
     } else if (generateTypeScriptSchema === undefined) {
-      ts = await getTypescriptSchema(endpoint, code);
+      ts = await getTypescriptSchema(endpoint, code, dereferenceMap);
     }
 
     if (ts) {

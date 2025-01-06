@@ -7,11 +7,7 @@ export interface CodeBlockProps {
   lang: string;
 }
 
-export async function CodeBlock({
-  code,
-  lang,
-  wrapper,
-}: CodeBlockProps): Promise<React.ReactElement> {
+export async function CodeBlock({ code, lang, wrapper }: CodeBlockProps) {
   const rendered = await highlight(code, {
     lang,
     themes: {
@@ -19,7 +15,6 @@ export async function CodeBlock({
       dark: 'vesper',
     },
     components: {
-      // @ts-expect-error -- JSX component
       pre: Base.Pre,
     },
   });

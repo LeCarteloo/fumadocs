@@ -18,20 +18,32 @@ export interface Option {
   title: ReactNode;
   description?: ReactNode;
 
+  /**
+   * Detect from a list of urls
+   */
+  urls?: string[];
+
   props?: HTMLAttributes<HTMLElement>;
 }
 
 export function RootToggle({
   options,
+  placeholder,
   ...props
 }: {
+  placeholder?: ReactNode;
   options: Option[];
 } & HTMLAttributes<HTMLButtonElement>) {
   const [open, setOpen] = useState(false);
   const { closeOnRedirect } = useSidebar();
   const pathname = usePathname();
+
   const selected = useMemo(() => {
-    return options.find((item) => isActive(item.url, pathname, true));
+    return options.findLast((item) =>
+      item.urls
+        ? item.urls.includes(pathname)
+        : isActive(item.url, pathname, true),
+    );
   }, [options, pathname]);
 
   const onClick = () => {
@@ -39,19 +51,22 @@ export function RootToggle({
     setOpen(false);
   };
 
+  const item = selected ? <Item {...selected} /> : placeholder;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        {...props}
-        className={cn(
-          'flex flex-row items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-fd-accent/50 hover:text-fd-accent-foreground',
-          props.className,
-        )}
-      >
-        {selected ? <Item {...selected} /> : null}
-
-        <ChevronDown className="me-1.5 size-4 text-fd-muted-foreground" />
-      </PopoverTrigger>
+      {item ? (
+        <PopoverTrigger
+          {...props}
+          className={cn(
+            'flex flex-row items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-fd-accent/50 hover:text-fd-accent-foreground',
+            props.className,
+          )}
+        >
+          {item}
+          <ChevronDown className="me-2 size-4 text-fd-muted-foreground" />
+        </PopoverTrigger>
+      ) : null}
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] overflow-hidden p-0">
         {options.map((item) => (
           <Link

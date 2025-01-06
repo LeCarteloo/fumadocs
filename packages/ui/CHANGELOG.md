@@ -1,5 +1,155 @@
 # next-docs-ui
 
+## 14.7.0
+
+### Patch Changes
+
+- a557bb4: revert `contain`
+- Updated dependencies [97ed36c]
+  - fumadocs-core@14.7.0
+
+## 14.6.8
+
+### Patch Changes
+
+- e95be52: Fix i18n toggle
+- f3298ea: Add css prefix by default
+  - fumadocs-core@14.6.8
+
+## 14.6.7
+
+### Patch Changes
+
+- Updated dependencies [5474343]
+  - fumadocs-core@14.6.7
+
+## 14.6.6
+
+### Patch Changes
+
+- 9c930ea: fix runtime error
+  - fumadocs-core@14.6.6
+
+## 14.6.5
+
+### Patch Changes
+
+- 969da26: Improve i18n api
+- Updated dependencies [969da26]
+  - fumadocs-core@14.6.5
+
+## 14.6.4
+
+### Patch Changes
+
+- 67124b1: Improve theme toggle on Notebook layout
+- 1810868: Enable `content-visibility` CSS features
+- Updated dependencies [b71064a]
+  - fumadocs-core@14.6.4
+
+## 14.6.3
+
+### Patch Changes
+
+- abc3677: Allow `className` to be used with `SidebarItem`
+  - fumadocs-core@14.6.3
+
+## 14.6.2
+
+### Patch Changes
+
+- 9908922: Add default icon styles (`transformer`) to sidebar tabs
+- ece734f: Support custom children of trigger on `InlineTOC` component
+- 1a2597a: Expose `--fd-tocnav-height` CSS variable
+- Updated dependencies [2357d40]
+  - fumadocs-core@14.6.2
+
+## 14.6.1
+
+### Patch Changes
+
+- 9532855: Hide toc popover when no items
+  - fumadocs-core@14.6.1
+
+## 14.6.0
+
+### Minor Changes
+
+- 010da9e: Tabs: support usage without `value`
+- bebb16b: Support `DynamicCodeBlock` component
+
+### Patch Changes
+
+- 9585561: Fix Twoslash popups focus outline
+- 4766292: Support React 19
+- Updated dependencies [4dfde6b]
+- Updated dependencies [bebb16b]
+- Updated dependencies [4766292]
+- Updated dependencies [050b326]
+  - fumadocs-core@14.6.0
+
+## 14.5.6
+
+### Patch Changes
+
+- b7745f4: Fix references problem of sidebar tabs
+- Updated dependencies [9a18c14]
+  - fumadocs-core@14.5.6
+
+## 14.5.5
+
+### Patch Changes
+
+- 06f66d8: improve notebook layout for transparent sidebar
+- 2d0501f: Fi sidebar icon trigger
+  - fumadocs-core@14.5.5
+
+## 14.5.4
+
+### Patch Changes
+
+- 8e2cb31: fix trivial bugs
+  - fumadocs-core@14.5.4
+
+## 14.5.3
+
+### Patch Changes
+
+- c5a5ba0: fix sidebar `defaultOpenLevel`
+- f34e895: Support `props` in tag items
+- 4c82a3d: Hide toc when it has no items and custom banner & footer
+- f8e5157: Fix custom `theme` with Typography plugin
+- ad00dd3: Support folder groups on sidebar tabs
+  - fumadocs-core@14.5.3
+
+## 14.5.2
+
+### Patch Changes
+
+- 072e349: fix initial sidebar level to 0
+  - fumadocs-core@14.5.2
+
+## 14.5.1
+
+### Patch Changes
+
+- 6fd480f: Fix old browser compatibility
+  - fumadocs-core@14.5.1
+
+## 14.5.0
+
+### Minor Changes
+
+- 66c70ec: **Replace official Tailwind CSS typography plugin**
+
+  - Other variants like `prose-sm` and `prose-gray` are removed, as it's supposed to only provide support for Fumadocs UI typography styles.
+
+- 05d224c: added the updateAnchor option for the Tabs ui component
+
+### Patch Changes
+
+- fumadocs-core@14.5.0
+
 ## 14.4.2
 
 ### Patch Changes

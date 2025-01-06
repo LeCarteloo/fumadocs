@@ -47,7 +47,11 @@ export type CodeBlockProps = HTMLAttributes<HTMLElement> & {
 export const Pre = forwardRef<HTMLPreElement, HTMLAttributes<HTMLPreElement>>(
   ({ className, ...props }, ref) => {
     return (
-      <pre ref={ref} className={cn('p-4', className)} {...props}>
+      <pre
+        ref={ref}
+        className={cn('p-4 focus-visible:outline-none', className)}
+        {...props}
+      >
         {props.children}
       </pre>
     );
@@ -127,7 +131,7 @@ export const CodeBlock = forwardRef<HTMLElement, CodeBlockProps>(
         <ScrollArea ref={areaRef} dir="ltr">
           <ScrollViewport
             {...viewportProps}
-            className={cn('max-h-[400px]', viewportProps?.className)}
+            className={cn('max-h-[600px]', viewportProps?.className)}
           >
             {props.children}
           </ScrollViewport>

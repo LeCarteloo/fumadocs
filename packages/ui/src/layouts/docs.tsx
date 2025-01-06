@@ -2,7 +2,6 @@ import type { PageTree } from 'fumadocs-core/server';
 import { type ReactNode, type HTMLAttributes } from 'react';
 import Link from 'next/link';
 import { Languages, MoreHorizontal } from 'lucide-react';
-import { notFound } from 'next/navigation';
 import { cn } from '@/utils/cn';
 import { buttonVariants } from '@/components/ui/button';
 import {
@@ -20,28 +19,29 @@ import {
   type IconItemType,
   BaseLinkItem,
 } from '@/layouts/links';
-import { getSidebarTabs, type TabOptions } from '@/utils/get-sidebar-tabs';
 import { RootToggle } from '@/components/layout/root-toggle';
 import { type BaseLayoutProps, getLinks } from './shared';
 import {
   LanguageToggle,
   LanguageToggleText,
 } from '@/components/layout/language-toggle';
-import { LinksMenu } from '@/layouts/docs.client';
+import { LinksMenu, Navbar, NavbarSidebarTrigger } from '@/layouts/docs.client';
 import { TreeContextProvider } from '@/contexts/tree';
 import { NavProvider, Title } from '@/components/layout/nav';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
-import { Navbar, NavbarSidebarTrigger } from '@/layouts/docs/navbar';
 import {
   LargeSearchToggle,
   SearchToggle,
 } from '@/components/layout/search-toggle';
 import { SearchOnly } from '@/contexts/search';
 import {
+  checkPageTree,
   getSidebarTabsFromOptions,
+  layoutVariables,
   SidebarLinkItem,
   type SidebarOptions,
 } from '@/layouts/docs/shared';
+import { type PageStyles, StylesProvider } from '@/contexts/layout';
 
 export interface DocsLayoutProps extends BaseLayoutProps {
   tree: PageTree.Root;
@@ -66,23 +66,35 @@ export function DocsLayout({
     banner: sidebarBanner,
     footer: sidebarFooter,
     components: sidebarComponents,
+    hideSearch: sidebarHideSearch,
     ...sidebar
   } = {},
   i18n = false,
   ...props
 }: DocsLayoutProps): ReactNode {
+  checkPageTree(props.tree);
   const links = getLinks(props.links ?? [], props.githubUrl);
   const Aside = collapsible ? CollapsibleSidebar : Sidebar;
-  if (props.tree === undefined) notFound();
 
   const tabs = getSidebarTabsFromOptions(tabOptions, props.tree) ?? [];
+  const variables = cn(
+    '[--fd-tocnav-height:36px] md:[--fd-sidebar-width:268px] xl:[--fd-toc-width:268px] xl:[--fd-tocnav-height:0px]',
+    !navReplace && navEnabled
+      ? '[--fd-nav-height:3.5rem] md:[--fd-nav-height:0px]'
+      : undefined,
+  );
+
+  const pageStyles: PageStyles = {
+    tocNav: cn('xl:hidden'),
+    toc: cn('max-xl:hidden'),
+  };
 
   return (
     <TreeContextProvider tree={props.tree}>
       <NavProvider transparentMode={transparentMode}>
         {replaceOrDefault(
           { enabled: navEnabled, component: navReplace },
-          <Navbar id="nd-subnav" className="h-14 md:hidden">
+          <Navbar className="md:hidden">
             <Title url={nav.url} title={nav.title} />
             <div className="flex flex-1 flex-row items-center gap-1">
               {nav.children}
@@ -98,38 +110,53 @@ export function DocsLayout({
           id="nd-docs-layout"
           {...props.containerProps}
           className={cn(
-            'flex flex-1 flex-row md:[--fd-sidebar-width:260px] xl:[--fd-toc-width:260px] [&_#nd-toc]:max-xl:hidden [&_#nd-tocnav]:xl:hidden max-xl:[&_article]:mx-0',
-            !navReplace && navEnabled
-              ? '[--fd-nav-height:3.5rem] md:[--fd-nav-height:0px]'
-              : null,
+            'flex flex-1 flex-row pe-[var(--fd-layout-offset)]',
+            variables,
             props.containerProps?.className,
           )}
+          style={{
+            ...layoutVariables,
+            ...props.containerProps?.style,
+          }}
         >
           {collapsible ? (
-            <SidebarCollapseTrigger className="fixed bottom-3 start-2 z-40 transition-opacity data-[collapsed=false]:pointer-events-none data-[collapsed=false]:opacity-0 max-md:hidden" />
+            <SidebarCollapseTrigger
+              className="fixed bottom-3 z-30 data-[collapsed=false]:hidden max-md:hidden"
+              style={{
+                insetInlineStart: 'calc(var(--fd-layout-offset) + 0.5rem)',
+              }}
+            />
           ) : null}
           {replaceOrDefault(
             { enabled: sidebarEnabled, component: sidebarReplace },
-            <Aside {...sidebar}>
+            <Aside
+              {...sidebar}
+              className={cn(
+                'md:ps-[var(--fd-layout-offset)]',
+                sidebar.className,
+              )}
+            >
               <SidebarHeader>
                 <SidebarHeaderItems {...nav} links={links} />
                 {sidebarBanner}
                 {tabs.length > 0 ? (
                   <RootToggle options={tabs} className="-mx-2" />
                 ) : null}
-                <SearchOnly>
-                  <LargeSearchToggle className="rounded-lg max-md:hidden" />
-                </SearchOnly>
+                {!sidebarHideSearch ? (
+                  <SearchOnly>
+                    <LargeSearchToggle className="rounded-lg max-md:hidden" />
+                  </SearchOnly>
+                ) : null}
               </SidebarHeader>
               <SidebarViewport>
-                <div className="px-2 pt-4 empty:hidden md:hidden">
+                <div className="pt-4 empty:hidden md:hidden">
                   {links
                     .filter((v) => v.type !== 'icon')
                     .map((item, i) => (
                       <SidebarLinkItem key={i} item={item} />
                     ))}
                 </div>
-                <div className="px-2 py-4 md:px-3">
+                <div className="py-4">
                   <SidebarPageTree components={sidebarComponents} />
                 </div>
               </SidebarViewport>
@@ -148,7 +175,7 @@ export function DocsLayout({
               tabs,
             },
           )}
-          {props.children}
+          <StylesProvider {...pageStyles}>{props.children}</StylesProvider>
         </main>
       </NavProvider>
     </TreeContextProvider>
@@ -243,4 +270,5 @@ function SidebarFooterItems({
   );
 }
 
-export { getSidebarTabs, type TabOptions, type LinkItemType };
+export { getSidebarTabsFromOptions, type TabOptions } from './docs/shared';
+export { type LinkItemType };

@@ -7,11 +7,11 @@ import type {
 import {
   useMemo,
   useState,
-  useCallback,
   createContext,
   useContext,
   useRef,
   useLayoutEffect,
+  useId,
   useEffect,
 } from 'react';
 import { cn } from '@/utils/cn';
@@ -52,28 +52,44 @@ export interface TabsProps extends BaseProps {
   defaultIndex?: number;
 
   items?: string[];
+
+  /**
+   * If true, updates the URL hash based on the tab's id
+   */
+  updateAnchor?: boolean;
 }
 
-const ValueChangeContext = createContext<(v: string) => void>(() => undefined);
+const TabsContext = createContext<{
+  items: string[];
+  valueToIdMap: Map<string, string>;
+  collection: CollectionType;
+} | null>(null);
 
 export function Tabs({
   groupId,
   items = [],
   persist = false,
   defaultIndex = 0,
+  updateAnchor = false,
   ...props
-}: TabsProps): React.ReactElement {
+}: TabsProps) {
   const values = useMemo(() => items.map((item) => toValue(item)), [items]);
   const [value, setValue] = useState(values[defaultIndex]);
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
+
+  const valueToIdMap = useMemo(() => new Map<string, string>(), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- re-reconstruct the collection if items changed
+  const collection = useMemo(() => createCollection(), [items]);
+
+  const onChange: ChangeListener = (v) => {
+    if (values.includes(v)) setValue(v);
+  };
+
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useLayoutEffect(() => {
     if (!groupId) return;
-
-    const onUpdate: ChangeListener = (v) => {
-      if (valuesRef.current.includes(v)) setValue(v);
-    };
+    const onUpdate: ChangeListener = (v) => onChangeRef.current(v);
 
     const previous = persist
       ? localStorage.getItem(groupId)
@@ -86,26 +102,41 @@ export function Tabs({
     };
   }, [groupId, persist]);
 
-  const onValueChange = useCallback(
-    (v: string) => {
-      if (groupId) {
-        listeners.get(groupId)?.forEach((item) => {
-          item(v);
-        });
+  useLayoutEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
 
-        if (persist) localStorage.setItem(groupId, v);
-        else sessionStorage.setItem(groupId, v);
-      } else {
-        setValue(v);
+    for (const [value, id] of valueToIdMap.entries()) {
+      if (id === hash) {
+        setValue(value);
+        break;
       }
-    },
-    [groupId, persist],
-  );
+    }
+  }, [valueToIdMap]);
 
   return (
     <Primitive.Tabs
       value={value}
-      onValueChange={onValueChange}
+      onValueChange={(v: string) => {
+        if (updateAnchor) {
+          const id = valueToIdMap.get(v);
+
+          if (id) {
+            window.history.replaceState(null, '', `#${id}`);
+          }
+        }
+
+        if (groupId) {
+          listeners.get(groupId)?.forEach((item) => {
+            item(v);
+          });
+
+          if (persist) localStorage.setItem(groupId, v);
+          else sessionStorage.setItem(groupId, v);
+        } else {
+          setValue(v);
+        }
+      }}
       {...props}
       className={cn('my-4', props.className)}
     >
@@ -116,9 +147,14 @@ export function Tabs({
           </Primitive.TabsTrigger>
         ))}
       </Primitive.TabsList>
-      <ValueChangeContext.Provider value={onValueChange}>
+      <TabsContext.Provider
+        value={useMemo(
+          () => ({ items, valueToIdMap, collection }),
+          [valueToIdMap, collection, items],
+        )}
+      >
         {props.children}
-      </ValueChangeContext.Provider>
+      </TabsContext.Provider>
     </Primitive.Tabs>
   );
 }
@@ -127,21 +163,29 @@ function toValue(v: string): string {
   return v.toLowerCase().replace(/\s/, '-');
 }
 
-export function Tab({
-  value,
-  className,
-  ...props
-}: TabsContentProps): React.ReactElement {
-  const v = toValue(value);
-  const onValueChange = useContext(ValueChangeContext);
+export type TabProps = Omit<TabsContentProps, 'value'> & {
+  /**
+   * Value of tab, detect from index if unspecified.
+   */
+  value?: TabsContentProps['value'];
+};
 
-  useEffect(() => {
-    const hash = window.location.hash.slice(1);
+export function Tab({ value, className, ...props }: TabProps) {
+  const ctx = useContext(TabsContext);
+  const resolvedValue =
+    value ??
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- `value` is not supposed to change
+    ctx?.items.at(useCollectionIndex());
+  if (!resolvedValue)
+    throw new Error(
+      'Failed to resolve tab `value`, please pass a `value` prop to the Tab component.',
+    );
 
-    if (hash === props.id) {
-      onValueChange(v);
-    }
-  }, [onValueChange, props.id, v]);
+  const v = toValue(resolvedValue);
+
+  if (props.id && ctx) {
+    ctx.valueToIdMap.set(v, props.id);
+  }
 
   return (
     <Primitive.TabsContent
@@ -151,6 +195,52 @@ export function Tab({
         className,
       )}
       {...props}
-    />
+    >
+      {props.children}
+    </Primitive.TabsContent>
   );
+}
+
+type CollectionKey = string | symbol;
+type CollectionType = ReturnType<typeof createCollection>;
+
+function createCollection() {
+  return [] as CollectionKey[];
+}
+
+/**
+ * Inspired by Headless UI.
+ *
+ * Return the index of children, this is made possible by registering the order of render from children using React context.
+ * This is supposed by work with pre-rendering & pure client-side rendering.
+ */
+function useCollectionIndex() {
+  const key = useId();
+  const ctx = useContext(TabsContext);
+  if (!ctx) throw new Error('You must wrap your component in <Tabs>');
+
+  const list = ctx.collection;
+
+  function register() {
+    if (!list.includes(key)) list.push(key);
+  }
+
+  function unregister() {
+    const idx = list.indexOf(key);
+    if (idx !== -1) list.splice(idx, 1);
+  }
+
+  useMemo(() => {
+    // re-order the item to the bottom if registered
+    unregister();
+    register();
+    // eslint-disable-next-line -- register
+  }, [list]);
+
+  useEffect(() => {
+    return unregister;
+    // eslint-disable-next-line -- clean up only
+  }, []);
+
+  return list.indexOf(key);
 }

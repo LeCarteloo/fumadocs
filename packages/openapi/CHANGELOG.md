@@ -1,5 +1,188 @@
 # @fuma-docs/openapi
 
+## 5.11.0
+
+### Minor Changes
+
+- 0e8be0e: Support XML request body
+
+### Patch Changes
+
+- 698b385: Fix switcher default value being ignored
+- Updated dependencies [a557bb4]
+- Updated dependencies [97ed36c]
+  - fumadocs-ui@14.7.0
+  - fumadocs-core@14.7.0
+
+## 5.10.6
+
+### Patch Changes
+
+- Updated dependencies [e95be52]
+- Updated dependencies [f3298ea]
+  - fumadocs-ui@14.6.8
+  - fumadocs-core@14.6.8
+
+## 5.10.5
+
+### Patch Changes
+
+- Updated dependencies [5474343]
+  - fumadocs-core@14.6.7
+  - fumadocs-ui@14.6.7
+
+## 5.10.4
+
+### Patch Changes
+
+- Updated dependencies [9c930ea]
+  - fumadocs-ui@14.6.6
+  - fumadocs-core@14.6.6
+
+## 5.10.3
+
+### Patch Changes
+
+- Updated dependencies [969da26]
+  - fumadocs-core@14.6.5
+  - fumadocs-ui@14.6.5
+
+## 5.10.2
+
+### Patch Changes
+
+- Updated dependencies [b71064a]
+- Updated dependencies [67124b1]
+- Updated dependencies [1810868]
+  - fumadocs-core@14.6.4
+  - fumadocs-ui@14.6.4
+
+## 5.10.1
+
+### Patch Changes
+
+- Updated dependencies [abc3677]
+  - fumadocs-ui@14.6.3
+  - fumadocs-core@14.6.3
+
+## 5.10.0
+
+### Minor Changes
+
+- 8aff7f4: Support Route Handler Proxy
+
+### Patch Changes
+
+- 1a2597a: Expose `--fd-tocnav-height` CSS variable
+- Updated dependencies [9908922]
+- Updated dependencies [2357d40]
+- Updated dependencies [ece734f]
+- Updated dependencies [1a2597a]
+  - fumadocs-ui@14.6.2
+  - fumadocs-core@14.6.2
+
+## 5.9.0
+
+### Minor Changes
+
+- ec5fb2e: Replace `@apidevtools/json-schema-ref-parser` with `@scalar/openapi-parser`
+
+### Patch Changes
+
+- Updated dependencies [9532855]
+  - fumadocs-ui@14.6.1
+  - fumadocs-core@14.6.1
+
+## 5.8.2
+
+### Patch Changes
+
+- 4766292: Support React 19
+- Updated dependencies [010da9e]
+- Updated dependencies [bebb16b]
+- Updated dependencies [9585561]
+- Updated dependencies [4dfde6b]
+- Updated dependencies [bebb16b]
+- Updated dependencies [4766292]
+- Updated dependencies [050b326]
+  - fumadocs-ui@14.6.0
+  - fumadocs-core@14.6.0
+
+## 5.8.1
+
+### Patch Changes
+
+- Updated dependencies [b7745f4]
+- Updated dependencies [9a18c14]
+  - fumadocs-ui@14.5.6
+  - fumadocs-core@14.5.6
+
+## 5.8.0
+
+### Minor Changes
+
+- 2d0501f: Support webhooks & callbacks
+- 2d0501f: Support OpenAPI 3.1
+
+### Patch Changes
+
+- Updated dependencies [06f66d8]
+- Updated dependencies [2d0501f]
+  - fumadocs-ui@14.5.5
+  - fumadocs-core@14.5.5
+
+## 5.7.5
+
+### Patch Changes
+
+- Updated dependencies [8e2cb31]
+  - fumadocs-ui@14.5.4
+  - fumadocs-core@14.5.4
+
+## 5.7.4
+
+### Patch Changes
+
+- Updated dependencies [c5a5ba0]
+- Updated dependencies [f34e895]
+- Updated dependencies [4c82a3d]
+- Updated dependencies [f8e5157]
+- Updated dependencies [ad00dd3]
+  - fumadocs-ui@14.5.3
+  - fumadocs-core@14.5.3
+
+## 5.7.3
+
+### Patch Changes
+
+- Updated dependencies [072e349]
+  - fumadocs-ui@14.5.2
+  - fumadocs-core@14.5.2
+
+## 5.7.2
+
+### Patch Changes
+
+- Updated dependencies [6fd480f]
+  - fumadocs-ui@14.5.1
+  - fumadocs-core@14.5.1
+
+## 5.7.1
+
+### Patch Changes
+
+- Updated dependencies [66c70ec]
+- Updated dependencies [05d224c]
+  - fumadocs-ui@14.5.0
+  - fumadocs-core@14.5.0
+
+## 5.7.0
+
+### Minor Changes
+
+- c66df64: OpenAPI: Display the server selector only when more than one server is defined in the OpenAPI schema
+  OpenAPI: Improve APIInfo position for better visibility on smaller screens
+
 ## 5.6.2
 
 ### Patch Changes

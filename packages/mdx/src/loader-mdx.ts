@@ -1,12 +1,11 @@
-import path from 'node:path';
-import fs from 'node:fs/promises';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
 import { parse } from 'node:querystring';
 import grayMatter from 'gray-matter';
 import { type LoaderContext } from 'webpack';
 import { type StructuredData } from 'fumadocs-core/mdx-plugins';
 import { getConfigHash, loadConfigCached } from '@/config/cached';
 import { buildMDX } from '@/utils/build-mdx';
-import { getDefaultMDXOptions, type TransformContext } from '@/config';
 import { getManifestEntryPath } from '@/map/manifest';
 import { formatError } from '@/utils/format-error';
 import { getGitTimestamp } from './utils/git-timestamp';
@@ -20,15 +19,6 @@ export interface Options {
   };
 }
 
-interface InternalFrontmatter {
-  _mdx?: {
-    /**
-     * Mirror another MDX file
-     */
-    mirror?: string;
-  };
-}
-
 export interface MetaFile {
   path: string;
   data: {
@@ -38,7 +28,7 @@ export interface MetaFile {
   };
 }
 
-function getQuery(query: string): {
+function parseQuery(query: string): {
   collection?: string;
   hash?: string;
 } {
@@ -70,11 +60,12 @@ export default async function loader(
   const { _ctx } = this.getOptions();
   const matter = grayMatter(source);
 
-  // notice that `resourceQuery` can be missing (e.g. on Turbopack)
-  const query = getQuery(this.resourceQuery);
-  const configHash = query.hash ?? (await getConfigHash(_ctx.configPath));
+  // notice that `resourceQuery` can be missing (e.g. `page.mdx`)
+  const {
+    hash: configHash = await getConfigHash(_ctx.configPath),
+    collection: collectionId,
+  } = parseQuery(this.resourceQuery);
   const config = await loadConfigCached(_ctx.configPath, configHash);
-  const collectionId = query.collection;
 
   let collection =
     collectionId !== undefined
@@ -85,32 +76,27 @@ export default async function loader(
     collection = undefined;
   }
 
-  const mdxOptions =
-    collection?.mdxOptions ??
-    getDefaultMDXOptions(config.global?.mdxOptions ?? {});
-
-  function getTransformContext(): TransformContext {
-    return {
-      buildMDX: async (v, options = mdxOptions) => {
-        const res = await buildMDX(
-          collectionId ?? 'global',
-          configHash,
-          v,
-          options,
-        );
-        return String(res.value);
-      },
-      source,
-      path: filePath,
-    };
-  }
+  const mdxOptions = collection?.mdxOptions ?? config.defaultMdxOptions;
 
   let frontmatter = matter.data;
   if (collection?.schema) {
-    const schema =
-      typeof collection.schema === 'function'
-        ? collection.schema(getTransformContext())
-        : collection.schema;
+    let schema = collection.schema;
+
+    if (typeof schema === 'function') {
+      schema = schema({
+        async buildMDX(v, options = mdxOptions) {
+          const res = await buildMDX(
+            collectionId ?? 'global',
+            configHash,
+            v,
+            options,
+          );
+          return String(res.value);
+        },
+        source,
+        path: filePath,
+      });
+    }
 
     const result = await schema.safeParseAsync(frontmatter);
     if (result.error) {
@@ -119,16 +105,6 @@ export default async function loader(
     }
 
     frontmatter = result.data as Record<string, unknown>;
-  }
-
-  const props = (matter.data as InternalFrontmatter)._mdx ?? {};
-  if (props.mirror) {
-    const mirrorPath = path.resolve(path.dirname(filePath), props.mirror);
-    this.addDependency(mirrorPath);
-
-    matter.content = await fs
-      .readFile(mirrorPath)
-      .then((res) => grayMatter(res.toString()).content);
   }
 
   let timestamp: number | undefined;
@@ -148,6 +124,7 @@ export default async function loader(
         data: {
           lastModified: timestamp,
         },
+        _compiler: this,
       },
     );
 

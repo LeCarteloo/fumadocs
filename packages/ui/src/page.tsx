@@ -14,17 +14,20 @@ import {
   Footer,
   type FooterProps,
   LastUpdate,
-  PageContainer,
-  PageHeader,
+  TocNav,
   Breadcrumb,
   type BreadcrumbProps,
+  PageBody,
+  PageArticle,
 } from './page.client';
-import { Toc, TOCItems, type TOCProps } from '@/components/layout/toc';
 import {
+  Toc,
+  TOCItems,
   TocPopoverTrigger,
   TocPopover,
   TocPopoverContent,
-} from '@/components/layout/toc-popover';
+  type TOCProps,
+} from '@/components/layout/toc';
 import { buttonVariants } from '@/components/ui/button';
 import { Edit, Text } from 'lucide-react';
 import { I18nLabel } from '@/contexts/i18n';
@@ -105,40 +108,54 @@ export interface DocsPageProps {
   editOnGithub?: EditOnGitHubOptions;
   lastUpdate?: Date | string | number;
 
+  container?: HTMLAttributes<HTMLDivElement>;
+  article?: HTMLAttributes<HTMLElement>;
   children: ReactNode;
 }
 
 export function DocsPage({
   toc = [],
-  breadcrumb = {},
   full = false,
-  footer = {},
   tableOfContentPopover: {
-    enabled: tocPopoverEnabled = true,
+    enabled: tocPopoverEnabled,
     component: tocPopoverReplace,
     ...tocPopoverOptions
   } = {},
   tableOfContent: {
-    // disable TOC on full mode, you can still enable it with `enabled` option.
-    enabled: tocEnabled = !full,
+    enabled: tocEnabled,
     component: tocReplace,
     ...tocOptions
   } = {},
   ...props
 }: DocsPageProps): ReactNode {
+  const isTocRequired =
+    toc.length > 0 ||
+    tocOptions.footer !== undefined ||
+    tocOptions.header !== undefined;
+
+  // disable TOC on full mode, you can still enable it with `enabled` option.
+  tocEnabled ??= !full && isTocRequired;
+
+  tocPopoverEnabled ??=
+    toc.length > 0 ||
+    tocPopoverOptions.header !== undefined ||
+    tocPopoverOptions.footer !== undefined;
+
   return (
     <AnchorProvider toc={toc} single={tocOptions.single}>
-      <PageContainer
-        id="nd-page"
+      <PageBody
+        {...props.container}
+        className={cn(props.container?.className)}
         style={
           {
-            '--fd-toc-width': tocEnabled ? undefined : '0px',
+            '--fd-tocnav-height': !tocPopoverEnabled ? '0px' : undefined,
+            ...props.container?.style,
           } as object
         }
       >
         {replaceOrDefault(
           { enabled: tocPopoverEnabled, component: tocPopoverReplace },
-          <PageHeader id="nd-tocnav">
+          <TocNav>
             <TocPopover>
               <TocPopoverTrigger className="size-full" items={toc} />
               <TocPopoverContent>
@@ -151,21 +168,25 @@ export function DocsPage({
                 {tocPopoverOptions.footer}
               </TocPopoverContent>
             </TocPopover>
-          </PageHeader>,
+          </TocNav>,
           {
             items: toc,
             ...tocPopoverOptions,
           },
         )}
-        <article
+        <PageArticle
+          {...props.article}
           className={cn(
-            'mx-auto flex w-full flex-1 flex-col gap-6 px-4 pt-10 md:px-7 md:pt-12',
-            tocEnabled ? 'max-w-[860px]' : 'max-w-[1120px]',
+            full || !tocEnabled ? 'max-w-[1120px]' : 'max-w-[860px]',
+            props.article?.className,
           )}
         >
           {replaceOrDefault(
-            breadcrumb,
-            <Breadcrumb includePage={breadcrumb.full} {...breadcrumb} />,
+            props.breadcrumb,
+            <Breadcrumb
+              includePage={props.breadcrumb?.full}
+              {...props.breadcrumb}
+            />,
           )}
           {props.children}
           <div role="none" className="flex-1" />
@@ -177,31 +198,31 @@ export function DocsPage({
               <LastUpdate date={new Date(props.lastUpdate)} />
             ) : null}
           </div>
-          {replaceOrDefault(footer, <Footer items={footer.items} />)}
-        </article>
-      </PageContainer>
+          {replaceOrDefault(
+            props.footer,
+            <Footer items={props.footer?.items} />,
+          )}
+        </PageArticle>
+      </PageBody>
       {replaceOrDefault(
         { enabled: tocEnabled, component: tocReplace },
-        <Toc id="nd-toc">
-          <div className="flex h-full w-[var(--fd-toc-width)] max-w-full flex-col gap-3 pe-2">
-            {tocOptions.header}
-            <h3 className="-ms-0.5 inline-flex items-center gap-1.5 text-sm text-fd-muted-foreground">
-              <Text className="size-4" />
-              <I18nLabel label="toc" />
-            </h3>
-            {tocOptions.style === 'clerk' ? (
-              <ClerkTOCItems items={toc} />
-            ) : (
-              <TOCItems items={toc} />
-            )}
-            {tocOptions.footer}
-          </div>
+        <Toc>
+          {tocOptions.header}
+          <h3 className="-ms-0.5 inline-flex items-center gap-1.5 text-sm text-fd-muted-foreground">
+            <Text className="size-4" />
+            <I18nLabel label="toc" />
+          </h3>
+          {tocOptions.style === 'clerk' ? (
+            <ClerkTOCItems items={toc} />
+          ) : (
+            <TOCItems items={toc} />
+          )}
+          {tocOptions.footer}
         </Toc>,
         {
           items: toc,
           ...tocOptions,
         },
-        <div role="none" className="flex-1" />,
       )}
     </AnchorProvider>
   );
@@ -225,7 +246,7 @@ function EditOnGitHub({
       className={cn(
         buttonVariants({
           color: 'secondary',
-          className: 'gap-1.5 py-1 text-fd-muted-foreground',
+          className: 'gap-1.5 text-fd-muted-foreground',
         }),
         props.className,
       )}
@@ -242,8 +263,10 @@ function EditOnGitHub({
 export const DocsBody = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('prose', className)} {...props} />
+>((props, ref) => (
+  <div ref={ref} {...props} className={cn('prose', props.className)}>
+    {props.children}
+  </div>
 ));
 
 DocsBody.displayName = 'DocsBody';
@@ -314,14 +337,16 @@ export function DocsCategory({
   page: Page;
   from: LoaderOutput<LoaderConfig>;
   tree?: PageTree.Root;
-}): ReactNode {
-  const tree =
-    forcedTree ??
-    (from._i18n
+}) {
+  let tree = forcedTree;
+
+  if (!tree) {
+    tree = from._i18n
       ? (from as LoaderOutput<LoaderConfig & { i18n: true }>).pageTree[
           page.locale ?? from._i18n.defaultLanguage
         ]
-      : from.pageTree);
+      : from.pageTree;
+  }
 
   const parent = findParent(tree, page);
   if (!parent) return null;
@@ -348,8 +373,6 @@ export function DocsCategory({
     </Cards>
   );
 }
-
-DocsBody.displayName = 'DocsBody';
 
 /**
  * For separate MDX page

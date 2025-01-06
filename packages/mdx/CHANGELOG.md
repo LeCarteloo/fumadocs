@@ -1,5 +1,37 @@
 # next-docs-mdx
 
+## 11.2.2
+
+### Patch Changes
+
+- 97ed36c: Improve default settings
+- Updated dependencies [97ed36c]
+  - fumadocs-core@14.7.0
+
+## 11.2.1
+
+### Patch Changes
+
+- 3445182: Fix `include` hot-reload issues
+- Updated dependencies [b71064a]
+  - fumadocs-core@14.6.4
+
+## 11.2.0
+
+### Minor Changes
+
+- bd0a140: Support reusing content with `include` tag
+
+### Patch Changes
+
+- fumadocs-core@14.6.3
+
+## 11.1.2
+
+### Patch Changes
+
+- fe36593: Fix global config types
+
 ## 11.1.1
 
 ### Patch Changes

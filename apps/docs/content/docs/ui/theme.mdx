@@ -32,7 +32,7 @@ colors will be changed.
 Fumadocs supports light/dark modes with [`next-themes`](https://github.com/pacocoursey/next-themes).
 The Theme Provider is a part of Root Provider.
 
-See [Root Provider](/docs/ui/blocks/root-provider#theme-provider) to learn more.
+See [Root Provider](/docs/ui/layouts/root-provider#theme-provider) to learn more.
 
 ### RTL Layout
 
@@ -44,11 +44,7 @@ To enable RTL, set the `dir` prop to `rtl` in body and root provider (required f
 import { RootProvider } from 'fumadocs-ui/provider';
 import type { ReactNode } from 'react';
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}): ReactNode {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body dir="rtl">
@@ -62,6 +58,26 @@ export default function RootLayout({
 ## CSS Variables
 
 Fumadocs UI provides some CSS variables for customising the layout.
+
+### Prefix
+
+By default, it has a `fd-` prefix to avoid conflicts with Shadcn UI or your own CSS variables.
+
+You can set or remove the prefix in `createPreset`:
+
+```js
+import { createPreset } from 'fumadocs-ui/tailwind-plugin';
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  presets: [
+    createPreset({
+      // no prefix
+      cssPrefix: '',
+    }),
+  ],
+};
+```
 
 ### Navbar Height
 
@@ -160,15 +176,18 @@ export default {
 
 ### Typography
 
-We use the [Tailwind CSS Typography](https://tailwindcss.com/docs/typography-plugin) plugin internally, you can customize it with CSS.
+We have a built-in plugin forked from [Tailwind CSS Typography](https://tailwindcss.com/docs/typography-plugin).
 
-The Tailwind CSS plugin overrides the default configuration for the Typography plugin. You can use the `prose` utility directly.
+The plugin adds a `prose` class and variants to customise it.
 
 ```tsx
 <div className="prose">
   <h1>Good Heading</h1>
 </div>
 ```
+
+> The plugin works with and only with Fumadocs UI's MDX components, it may conflict with `@tailwindcss/typography`.
+> If you need to use `@tailwindcss/typography` over the default plugin, [set a class name option](https://github.com/tailwindlabs/tailwindcss-typography/blob/main/README.md#changing-the-default-class-name) to avoid conflicts.
 
 ### Colors
 

@@ -1,6 +1,6 @@
 {
   "name": "@fumadocs/mdx-remote",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "The remote MDX files adapter for Fumadocs",
   "keywords": [
     "NextJs",
@@ -61,23 +61,23 @@
   },
   "dependencies": {
     "@mdx-js/mdx": "^3.1.0",
-    "bufferutil": "^4.0.8",
-    "chokidar": "^4.0.1",
+    "bufferutil": "^4.0.9",
+    "chokidar": "^4.0.3",
     "fast-glob": "^3.3.1",
     "gray-matter": "^4.0.3",
     "micromatch": "^4.0.8",
     "ws": "^8.18.0",
-    "zod": "^3.23.8"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/mdx": "^2.0.13",
     "@types/micromatch": "^4.0.9",
-    "@types/node": "22.9.0",
-    "@types/react": "^18.3.12",
+    "@types/node": "22.10.5",
+    "@types/react": "^19.0.2",
     "@types/ws": "^8.5.13",
     "eslint-config-custom": "workspace:*",
     "fumadocs-core": "workspace:*",
-    "next": "15.0.3",
+    "next": "15.1.3",
     "tsconfig": "workspace:*",
     "unified": "^11.0.5",
     "vfile": "^6.0.3"
@@ -85,7 +85,7 @@
   "peerDependencies": {
     "fumadocs-core": "^13.2.1 || ^14.0.0",
     "next": "14.x.x || 15.x.x",
-    "react": ">= 18"
+    "react": "18.x.x || 19.x.x"
   },
   "publishConfig": {
     "access": "public"

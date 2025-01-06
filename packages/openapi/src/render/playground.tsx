@@ -1,8 +1,16 @@
-import type { OpenAPIV3 as OpenAPI } from 'openapi-types';
 import type { ReactNode } from 'react';
-import type { MethodInformation, RenderContext } from '@/types';
-import { getPreferredType, noRef } from '@/utils/schema';
+import type {
+  MethodInformation,
+  ParameterObject,
+  RenderContext,
+} from '@/types';
+import {
+  getPreferredType,
+  type NoReference,
+  type ParsedSchema,
+} from '@/utils/schema';
 import { getSecurities } from '@/utils/get-security';
+import { FetchResult } from '@/ui/playground/fetcher';
 
 interface BaseRequestField {
   name: string;
@@ -67,22 +75,25 @@ export type RequestSchema =
 
 interface Context {
   allowFile: boolean;
-  schema: Record<string, RequestSchema>;
-  registered: WeakMap<OpenAPI.SchemaObject, string>;
+  references: Record<string, RequestSchema>;
+  registered: WeakMap<ParsedSchema, string>;
   nextId: () => string;
+  render: RenderContext;
 }
 
 export interface APIPlaygroundProps {
   route: string;
   method: string;
-  bodyType: 'json' | 'form-data';
   authorization?: PrimitiveRequestField & { authType: string };
   path?: PrimitiveRequestField[];
   query?: PrimitiveRequestField[];
   header?: PrimitiveRequestField[];
-  body?: RequestSchema;
+  body?: RequestSchema & {
+    mediaType: string;
+  };
   schemas: Record<string, RequestSchema>;
-  onQueryFinish?: (data: Response) => void;
+  proxyUrl?: string;
+  onQueryFinish?: (data: Promise<FetchResult>) => void;
   renderResult?: boolean;
 }
 
@@ -96,37 +107,46 @@ export function Playground({
   ctx: RenderContext;
 }): ReactNode {
   let currentId = 0;
-  const bodyContent = noRef(method.requestBody)?.content;
+  const bodyContent = method.requestBody?.content;
   const mediaType = bodyContent ? getPreferredType(bodyContent) : undefined;
 
   const context: Context = {
     allowFile: mediaType === 'multipart/form-data',
-    schema: {},
+    references: {},
     nextId() {
       return String(currentId++);
     },
     registered: new WeakMap(),
+    render: ctx,
   };
+
+  const bodySchema =
+    bodyContent && mediaType && bodyContent[mediaType].schema
+      ? toSchema(bodyContent[mediaType].schema, true, context)
+      : undefined;
 
   const props: APIPlaygroundProps = {
     authorization: getAuthorizationField(method, ctx),
     method: method.method,
     route: path,
-    bodyType: mediaType === 'multipart/form-data' ? 'form-data' : 'json',
     path: method.parameters
-      .filter((v) => v.in === 'path')
+      ?.filter((v) => v.in === 'path')
       .map((v) => parameterToField(v, context)),
     query: method.parameters
-      .filter((v) => v.in === 'query')
+      ?.filter((v) => v.in === 'query')
       .map((v) => parameterToField(v, context)),
     header: method.parameters
-      .filter((v) => v.in === 'header')
+      ?.filter((v) => v.in === 'header')
       .map((v) => parameterToField(v, context)),
     body:
-      bodyContent && mediaType && bodyContent[mediaType].schema
-        ? toSchema(noRef(bodyContent[mediaType].schema), true, context)
+      bodySchema && mediaType
+        ? {
+            ...bodySchema,
+            mediaType: mediaType as string,
+          }
         : undefined,
-    schemas: context.schema,
+    schemas: context.references,
+    proxyUrl: ctx.proxyUrl,
   };
 
   return <ctx.renderer.APIPlayground {...props} />;
@@ -162,7 +182,7 @@ function getAuthorizationField(
 }
 
 function getIdFromSchema(
-  schema: OpenAPI.SchemaObject,
+  schema: ParsedSchema,
   required: boolean,
   ctx: Context,
 ): string {
@@ -171,7 +191,7 @@ function getIdFromSchema(
   if (registered === undefined) {
     const id = ctx.nextId();
     ctx.registered.set(schema, id);
-    ctx.schema[id] = toSchema(schema, required, ctx);
+    ctx.references[id] = toSchema(schema, required, ctx);
     return id;
   }
 
@@ -179,13 +199,13 @@ function getIdFromSchema(
 }
 
 function parameterToField(
-  v: OpenAPI.ParameterObject,
+  v: NoReference<ParameterObject>,
   ctx: Context,
 ): PrimitiveRequestField {
   return {
     name: v.name,
     ...(toSchema(
-      noRef(v.schema) ?? { type: 'string' },
+      v.schema ?? { type: 'string' },
       v.required ?? false,
       ctx,
     ) as PrimitiveSchema),
@@ -193,7 +213,7 @@ function parameterToField(
 }
 
 function toReference(
-  schema: OpenAPI.SchemaObject,
+  schema: ParsedSchema,
   required: boolean,
   ctx: Context,
 ): ReferenceSchema {
@@ -205,7 +225,7 @@ function toReference(
 }
 
 function toSchema(
-  schema: OpenAPI.SchemaObject,
+  schema: NoReference<ParsedSchema>,
   required: boolean,
   ctx: Context,
 ): RequestSchema {
@@ -214,7 +234,7 @@ function toSchema(
       type: 'array',
       description: schema.description ?? schema.title,
       isRequired: required,
-      items: getIdFromSchema(noRef(schema.items), false, ctx),
+      items: getIdFromSchema(schema.items, false, ctx),
     };
   }
 
@@ -227,24 +247,24 @@ function toSchema(
 
     Object.entries(schema.properties ?? {}).forEach(([key, prop]) => {
       properties[key] = toReference(
-        noRef(prop),
+        prop,
         schema.required?.includes(key) ?? false,
         ctx,
       );
     });
 
     schema.allOf?.forEach((c) => {
-      const field = toSchema(noRef(c), true, ctx);
+      const field = toSchema(c, true, ctx);
 
       if (field.type === 'object') Object.assign(properties, field.properties);
     });
 
-    const additional = noRef(schema.additionalProperties);
+    const additional = schema.additionalProperties;
     let additionalProperties: string | boolean | undefined;
 
     if (additional && typeof additional === 'object') {
       if (
-        !additional.type &&
+        (!additional.type || additional.type.length === 0) &&
         !additional.anyOf &&
         !additional.allOf &&
         !additional.oneOf
@@ -274,9 +294,7 @@ function toSchema(
         type: 'switcher',
         description: schema.description ?? schema.title,
         items: Object.fromEntries(
-          combine.map((c, idx) => {
-            const item = noRef(c);
-
+          combine.map((item, idx) => {
             return [
               item.title ?? item.type ?? `Item ${idx.toString()}`,
               toReference(item, true, ctx),
@@ -298,6 +316,39 @@ function toSchema(
       type: 'file',
       isRequired: required,
       description: schema.description ?? schema.title,
+    };
+  }
+
+  if (Array.isArray(schema.type)) {
+    const items: Record<string, RequestSchema> = {};
+
+    for (const type of schema.type) {
+      if (type === 'array') {
+        items[type] = {
+          type,
+          items:
+            'items' in schema && schema.items
+              ? toSchema(schema.items, false, ctx)
+              : toSchema({}, required, ctx),
+          isRequired: required,
+        };
+      } else {
+        items[type] = toSchema(
+          {
+            ...schema,
+            type,
+          },
+          true,
+          ctx,
+        );
+      }
+    }
+
+    return {
+      type: 'switcher',
+      description: schema.description ?? schema.title,
+      items,
+      isRequired: required,
     };
   }
 

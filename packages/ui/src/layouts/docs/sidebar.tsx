@@ -59,13 +59,13 @@ interface InternalContext {
 }
 
 const itemVariants = cva(
-  'flex flex-row items-center gap-2 rounded-md px-3 py-2 text-fd-muted-foreground transition-colors duration-100 [overflow-wrap:anywhere] md:px-2 md:py-1.5 [&_svg]:size-4',
+  'flex flex-row items-center gap-2 rounded-md p-2 text-fd-muted-foreground [overflow-wrap:anywhere] md:py-1.5 [&_svg]:size-4',
   {
     variants: {
       active: {
         true: 'bg-fd-primary/10 font-medium text-fd-primary',
         false:
-          'hover:bg-fd-accent/50 hover:text-fd-accent-foreground/80 hover:transition-none',
+          'transition-colors duration-100 hover:bg-fd-accent/50 hover:text-fd-accent-foreground/80 hover:transition-none',
       },
     },
   },
@@ -115,13 +115,13 @@ export function CollapsibleSidebar(props: SidebarProps) {
   return (
     <Sidebar
       {...props}
-      onPointerEnter={onEnter}
-      onPointerLeave={onLeave}
+      onPointerEnter={collapsed ? onEnter : undefined}
+      onPointerLeave={collapsed ? onLeave : undefined}
       data-collapsed={collapsed}
       className={cn(
-        'transition-[flex,margin,opacity,transform]',
+        'md:transition-all',
         collapsed &&
-          'md:-me-[var(--fd-sidebar-width)] md:flex-initial md:translate-x-[calc(var(--fd-sidebar-offset)*-1)] rtl:md:translate-x-[var(--fd-sidebar-offset)]',
+          'md:-me-[var(--fd-sidebar-width)] md:translate-x-[calc(var(--fd-sidebar-offset)*-1)] rtl:md:translate-x-[var(--fd-sidebar-offset)]',
         collapsed && hover && 'z-50 md:translate-x-0',
         collapsed && !hover && 'md:opacity-0',
         props.className,
@@ -155,7 +155,7 @@ export function Sidebar({
         blockScrollingWidth={768} // md
         {...props}
         className={cn(
-          'fixed top-fd-layout-top z-30 bg-fd-card text-sm md:sticky md:h-[var(--fd-sidebar-height)] md:flex-1',
+          'fixed top-fd-layout-top z-30 bg-fd-card text-sm md:sticky md:h-[var(--fd-sidebar-height)]',
           'max-md:inset-x-0 max-md:bottom-0 max-md:bg-fd-background/80 max-md:text-[15px] max-md:backdrop-blur-lg max-md:data-[open=false]:invisible',
           props.className,
         )}
@@ -185,10 +185,7 @@ export function SidebarHeader(props: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       {...props}
-      className={cn(
-        'flex flex-col gap-2 px-4 empty:hidden md:px-3',
-        props.className,
-      )}
+      className={cn('flex flex-col gap-2 px-4 empty:hidden', props.className)}
     >
       {props.children}
     </div>
@@ -213,6 +210,7 @@ export function SidebarViewport(props: ScrollAreaProps) {
   return (
     <ScrollArea {...props} className={cn('h-full', props.className)}>
       <ScrollViewport
+        className="px-4"
         style={{
           maskImage: 'linear-gradient(to bottom, transparent 2px, white 16px)',
         }}
@@ -228,7 +226,7 @@ export function SidebarSeparator(props: HTMLAttributes<HTMLParagraphElement>) {
     <p
       {...props}
       className={cn(
-        'mb-2 mt-8 px-3 text-sm font-medium first:mt-0 md:px-2',
+        'mb-2 mt-8 px-2 text-sm font-medium first:mt-0',
         props.className,
       )}
     >
@@ -252,7 +250,7 @@ export function SidebarItem({
     <Link
       {...props}
       data-active={active}
-      className={cn(itemVariants({ active }))}
+      className={cn(itemVariants({ active }), props.className)}
       prefetch={prefetch}
     >
       {icon ?? (props.external ? <ExternalLink /> : null)}
@@ -262,19 +260,15 @@ export function SidebarItem({
 }
 
 export function SidebarFolder({
-  level,
-  defaultOpen,
+  defaultOpen = false,
   ...props
 }: {
   children: ReactNode;
   defaultOpen?: boolean;
-  level: number;
 }) {
-  const { defaultOpenLevel } = useInternalContext();
-  const shouldExtend = defaultOpen ?? defaultOpenLevel >= level;
-  const [open, setOpen] = useState(shouldExtend);
+  const [open, setOpen] = useState(defaultOpen);
 
-  useOnChange(shouldExtend, (v) => {
+  useOnChange(defaultOpen, (v) => {
     if (v) setOpen(v);
   });
 
@@ -295,7 +289,7 @@ export function SidebarFolderTrigger(props: CollapsibleTriggerProps) {
   return (
     <CollapsibleTrigger
       {...props}
-      className={cn(itemVariants({ active: false }), 'w-full pe-3.5 md:pe-1.5')}
+      className={cn(itemVariants({ active: false }), 'w-full')}
     >
       {props.children}
       <ChevronDown
@@ -318,16 +312,13 @@ export function SidebarFolderLink(props: LinkProps) {
     <Link
       {...props}
       data-active={active}
-      className={cn(
-        itemVariants({ active }),
-        'w-full pe-3.5 md:pe-1.5',
-        props.className,
-      )}
+      className={cn(itemVariants({ active }), 'w-full', props.className)}
       onClick={(e) => {
-        setOpen((prev) => !active || !prev);
-
         if ((e.target as HTMLElement).hasAttribute('data-icon')) {
+          setOpen((prev) => !prev);
           e.preventDefault();
+        } else {
+          setOpen((prev) => !active || !prev);
         }
       }}
       prefetch={prefetch}
@@ -344,7 +335,7 @@ export function SidebarFolderLink(props: LinkProps) {
 export function SidebarFolderContent(props: CollapsibleContentProps) {
   return (
     <CollapsibleContent {...props}>
-      <div className="ms-3 border-s py-1.5 ps-1.5 md:ms-2 md:ps-2">
+      <div className="ms-3 border-s py-1.5 ps-1.5 md:ms-2">
         {props.children}
       </div>
     </CollapsibleContent>
@@ -367,6 +358,7 @@ export function SidebarCollapseTrigger(
           color: 'ghost',
           size: 'icon',
         }),
+        'backdrop-blur-lg',
         props.className,
       )}
       onClick={() => {
@@ -401,12 +393,12 @@ export function SidebarPageTree(props: {
   const { root } = useTreeContext();
 
   return useMemo(() => {
+    const { Separator, Item, Folder } = props.components ?? {};
+
     function renderSidebarList(
       items: PageTree.Node[],
       level: number,
     ): ReactNode[] {
-      const { Separator, Item, Folder } = props.components ?? {};
-
       return items.map((item, i) => {
         const id = `${item.type}_${i.toString()}`;
 
@@ -415,10 +407,9 @@ export function SidebarPageTree(props: {
             if (Separator) return <Separator key={id} item={item} />;
             return <SidebarSeparator key={id}>{item.name}</SidebarSeparator>;
           case 'folder':
-            if (Folder)
-              return <Folder key={id} item={item} level={level + 1} />;
+            if (Folder) return <Folder key={id} item={item} level={level} />;
             return (
-              <PageTreeFolder key={id} item={item} level={level + 1}>
+              <PageTreeFolder key={id} item={item} level={level}>
                 {renderSidebarList(item.children, level + 1)}
               </PageTreeFolder>
             );
@@ -451,12 +442,14 @@ function PageTreeFolder({
   level: number;
   children: ReactNode;
 }) {
+  const { defaultOpenLevel } = useInternalContext();
   const path = useTreePath();
 
   return (
     <SidebarFolder
-      defaultOpen={item.defaultOpen || path.includes(item)}
-      level={level + 1}
+      defaultOpen={
+        (item.defaultOpen ?? defaultOpenLevel >= level) || path.includes(item)
+      }
     >
       {item.index ? (
         <SidebarFolderLink href={item.index.url} external={item.index.external}>

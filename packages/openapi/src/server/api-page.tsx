@@ -1,54 +1,74 @@
-import type { ReactElement, ReactNode } from 'react';
-import { type OpenAPIV3 as OpenAPI } from 'openapi-types';
+import type { DereferenceMap, Document } from '@/types';
 import Slugger from 'github-slugger';
-import Parser from '@apidevtools/json-schema-ref-parser';
 import { Operation } from '@/render/operation';
 import type { RenderContext } from '@/types';
-import { createMethod } from '@/schema/method';
+import { createMethod } from '@/server/create-method';
 import { createRenders, type Renderer } from '@/render/renderer';
+import type { OpenAPIV3_1 } from 'openapi-types';
+import type { NoReference } from '@/utils/schema';
+import { type DocumentInput, processDocument } from '@/utils/process-document';
+import { ReactNode } from 'react';
 
-export interface ApiPageProps
-  extends Pick<
-    RenderContext,
-    'generateCodeSamples' | 'generateTypeScriptSchema' | 'shikiOptions'
-  > {
-  document: string | OpenAPI.Document;
+type ApiPageContextProps = Pick<
+  Partial<RenderContext>,
+  | 'shikiOptions'
+  | 'generateTypeScriptSchema'
+  | 'generateCodeSamples'
+  | 'proxyUrl'
+>;
+
+export interface ApiPageProps extends ApiPageContextProps {
+  document: DocumentInput;
+  hasHead: boolean;
+
+  renderer?: Partial<Renderer>;
 
   /**
    * An array of operations
    */
-  operations: Operation[];
-  hasHead: boolean;
-  renderer?: Partial<Renderer>;
+  operations?: OperationItem[];
+
+  webhooks?: WebhookItem[];
+
   children?: ReactNode[];
+
+  /**
+   * By default, it is disabled on dev mode
+   */
   disableCache?: boolean;
 }
 
-const cache = new Map<string, OpenAPI.Document>();
+type ProcessedDocument = {
+  document: NoReference<Document>;
+  dereferenceMap: DereferenceMap;
+};
 
-export interface Operation {
-  path: string;
-  method: OpenAPI.HttpMethods;
+export interface WebhookItem {
+  name: string;
+  method: OpenAPIV3_1.HttpMethods;
 }
 
-export async function APIPage(props: ApiPageProps): Promise<ReactElement> {
-  const { operations, hasHead = true, children } = props;
-  let document: OpenAPI.Document;
+export interface OperationItem {
+  path: string;
+  method: OpenAPIV3_1.HttpMethods;
+}
 
-  if (typeof props.document === 'string' && !props.disableCache) {
-    const cached = cache.get(props.document);
-    document =
-      cached ?? (await Parser.dereference<OpenAPI.Document>(props.document));
-    cache.set(props.document, document);
-  } else {
-    document = await Parser.dereference<OpenAPI.Document>(props.document);
-  }
+export async function APIPage(props: ApiPageProps) {
+  const {
+    operations,
+    hasHead = true,
+    webhooks,
+    disableCache = process.env.NODE_ENV === 'development',
+    children,
+  } = props;
 
-  const ctx = getContext(document, props);
+  const processed = await processDocument(props.document, disableCache);
+  const ctx = await getContext(processed, props);
+  const { document } = processed;
   return (
     <ctx.renderer.Root baseUrl={ctx.baseUrl}>
-      {operations.map((item) => {
-        const pathItem = document.paths[item.path];
+      {operations?.map((item) => {
+        const pathItem = document.paths?.[item.path];
         if (!pathItem) return null;
 
         const operation = pathItem[item.method];
@@ -60,12 +80,32 @@ export async function APIPage(props: ApiPageProps): Promise<ReactElement> {
           <Operation
             key={`${item.path}:${item.method}`}
             method={method}
+            customDescription={children}
             path={item.path}
             ctx={ctx}
-            baseUrls={
-              document.servers ? document.servers.map((s) => s.url) : []
-            }
-            customDescription={children}
+            hasHead={hasHead}
+          />
+        );
+      })}
+      {webhooks?.map((item) => {
+        const webhook = document.webhooks?.[item.name];
+        if (!webhook) return;
+
+        const hook = webhook[item.method];
+        if (!hook) return;
+
+        const method = createMethod(item.method, webhook, hook);
+
+        return (
+          <Operation
+            type="webhook"
+            key={`${item.name}:${item.method}`}
+            method={method}
+            ctx={{
+              ...ctx,
+              baseUrl: 'http://localhost:8080',
+            }}
+            path={`/${item.name}`}
             hasHead={hasHead}
           />
         );
@@ -74,12 +114,16 @@ export async function APIPage(props: ApiPageProps): Promise<ReactElement> {
   );
 }
 
-function getContext(
-  document: OpenAPI.Document,
-  options: ApiPageProps,
-): RenderContext {
+export async function getContext(
+  { document, dereferenceMap }: ProcessedDocument,
+  options: ApiPageContextProps & {
+    renderer?: Partial<Renderer>;
+  } = {},
+): Promise<RenderContext> {
   return {
-    document,
+    document: document,
+    dereferenceMap,
+    proxyUrl: options.proxyUrl,
     renderer: {
       ...createRenders(options.shikiOptions),
       ...options.renderer,
@@ -88,6 +132,7 @@ function getContext(
     generateTypeScriptSchema: options.generateTypeScriptSchema,
     generateCodeSamples: options.generateCodeSamples,
     baseUrl: document.servers?.[0].url ?? 'https://example.com',
+    baseUrls: document.servers?.map((s) => s.url) ?? [],
     slugger: new Slugger(),
   };
 }

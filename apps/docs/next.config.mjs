@@ -8,13 +8,15 @@ const withAnalyzer = createBundleAnalyzer({
 /** @type {import('next').NextConfig} */
 
 const config = {
-  output: 'export',
   reactStrictMode: true,
   eslint: {
     // Replaced by root workspace command
     ignoreDuringBuilds: true,
   },
-  serverExternalPackages: ['ts-morph', 'typescript'],
+  serverExternalPackages: ['ts-morph', 'typescript', 'oxc-transform'],
+  experimental: {
+    reactCompiler: true,
+  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -24,6 +26,20 @@ const config = {
         port: '',
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: '/docs/ui/blocks/layout',
+        destination: '/docs/ui/layouts/docs',
+        permanent: true,
+      },
+      {
+        source: '/docs/ui/blocks/:path*',
+        destination: '/docs/ui/layouts/:path*',
+        permanent: true,
+      },
+    ];
   },
 };
 

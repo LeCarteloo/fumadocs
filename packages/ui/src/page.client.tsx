@@ -21,42 +21,22 @@ import {
   type BreadcrumbOptions,
   getBreadcrumbItemsFromPath,
 } from 'fumadocs-core/breadcrumb';
+import { usePageStyles } from '@/contexts/layout';
 
-export function PageContainer(props: HTMLAttributes<HTMLDivElement>) {
-  const { collapsed } = useSidebar();
-
-  return (
-    <div
-      {...props}
-      className={cn(
-        'flex w-full min-w-0 max-w-[var(--fd-page-width)] flex-col md:transition-[max-width]',
-        props.className,
-      )}
-      style={
-        {
-          ...props.style,
-          '--fd-page-width': collapsed
-            ? '100vw'
-            : 'calc(min(100vw, var(--fd-layout-width)) - var(--fd-sidebar-width) - var(--fd-toc-width))',
-        } as object
-      }
-    >
-      {props.children}
-    </div>
-  );
-}
-
-export function PageHeader(props: HTMLAttributes<HTMLDivElement>) {
+export function TocNav(props: HTMLAttributes<HTMLDivElement>) {
   const { open } = useSidebar();
+  const { tocNav } = usePageStyles();
   const { isTransparent } = useNav();
 
   return (
     <header
+      id="nd-tocnav"
       {...props}
       className={cn(
-        'sticky top-fd-layout-top z-10 flex flex-row items-center border-b border-fd-foreground/10 text-sm transition-colors',
-        !isTransparent && 'bg-fd-background/80 backdrop-blur-md',
+        'sticky top-fd-layout-top z-10 flex flex-row items-center border-b border-fd-foreground/10 text-sm backdrop-blur-md transition-colors',
+        !isTransparent && 'bg-fd-background/80',
         open && 'opacity-0',
+        tocNav,
         props.className,
       )}
       style={
@@ -69,6 +49,37 @@ export function PageHeader(props: HTMLAttributes<HTMLDivElement>) {
     >
       {props.children}
     </header>
+  );
+}
+
+export function PageBody(props: HTMLAttributes<HTMLDivElement>) {
+  const { page } = usePageStyles();
+
+  return (
+    <div
+      id="nd-page"
+      {...props}
+      className={cn('flex w-full min-w-0 flex-col', page, props.className)}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+export function PageArticle(props: HTMLAttributes<HTMLElement>) {
+  const { article } = usePageStyles();
+
+  return (
+    <article
+      {...props}
+      className={cn(
+        'flex w-full flex-1 flex-col gap-6 px-4 pt-8 md:pt-12 lg:px-8 xl:mx-auto',
+        article,
+        props.className,
+      )}
+    >
+      {props.children}
+    </article>
   );
 }
 

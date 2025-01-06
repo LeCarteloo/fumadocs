@@ -1,15 +1,18 @@
-import typography from '@tailwindcss/typography';
 import plugin from 'tailwindcss/plugin';
 import type { CSSRuleObject, PresetsConfig } from 'tailwindcss/types/config';
 import { presets } from './theme/colors';
 import { animations } from './theme/animations';
-import { typography as typographyConfig } from './theme/typography';
+import {
+  type Options as TypographyOptions,
+  typography,
+} from './theme/typography';
 
-export interface DocsUIOptions {
+export interface DocsUIOptions
+  extends Pick<TypographyOptions, 'disableRoundedTable'> {
   /**
    * Prefix to the variable name of colors
    *
-   * @defaultValue ''
+   * @defaultValue 'fd'
    */
   cssPrefix?: string;
 
@@ -39,10 +42,7 @@ export interface DocsUIOptions {
    */
   preset?: keyof typeof presets | Preset;
 
-  /**
-   * Disable custom table styles
-   */
-  disableRoundedTable?: boolean;
+  typography?: TypographyOptions;
 }
 
 type Keys =
@@ -120,7 +120,7 @@ function createTailwindColors(
 }
 
 export const docsUi = plugin.withOptions<DocsUIOptions>(
-  ({ cssPrefix = '', preset = 'default', layoutWidth = '100vw' } = {}) => {
+  ({ cssPrefix = 'fd', preset = 'default', layoutWidth = '100vw' } = {}) => {
     return ({ addBase, addComponents, addUtilities }) => {
       const { light, dark, css } =
         typeof preset === 'string' ? presets[preset] : preset;
@@ -133,6 +133,7 @@ export const docsUi = plugin.withOptions<DocsUIOptions>(
           '--fd-layout-width': layoutWidth,
           '--fd-banner-height': '0px',
           '--fd-nav-height': '0px',
+          '--fd-tocnav-height': '0px',
 
           '--fd-diff-remove-color': 'rgba(200,10,100,0.12)',
           '--fd-diff-remove-symbol-color': 'rgb(230,10,100)',
@@ -142,6 +143,10 @@ export const docsUi = plugin.withOptions<DocsUIOptions>(
         '.dark': getThemeStyles(cssPrefix, dark),
         '*': {
           'border-color': `theme('colors.fd-border')`,
+        },
+
+        "[data-rmiz-modal-overlay='visible']": {
+          'background-color': `theme('colors.fd-background')`,
         },
         body: {
           'background-color': `theme('colors.fd-background')`,
@@ -239,7 +244,7 @@ export const docsUi = plugin.withOptions<DocsUIOptions>(
     };
   },
   ({
-    cssPrefix = '',
+    cssPrefix = 'fd',
     modifyContainer = true,
     addGlobalColors = false,
   } = {}) => ({
@@ -272,15 +277,15 @@ export const docsUi = plugin.withOptions<DocsUIOptions>(
 export function createPreset(options: DocsUIOptions = {}): PresetsConfig {
   return {
     darkMode: 'class',
-    plugins: [typography, docsUi(options)],
-    theme: {
-      extend: {
-        typography: {
-          DEFAULT: typographyConfig(options),
-        },
-      },
-    },
+    plugins: [
+      typography({
+        disableRoundedTable: options.disableRoundedTable,
+        ...options.typography,
+      }),
+      docsUi(options),
+    ],
   };
 }
 
+export { typography };
 export { presets } from './theme/colors';

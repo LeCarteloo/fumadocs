@@ -1,7 +1,6 @@
 'use client';
 
 import { FileText, Hash, Loader2, SearchIcon, Text } from 'lucide-react';
-import type { SortedResult } from 'fumadocs-core/server';
 import { useRouter } from 'next/navigation';
 import {
   useMemo,
@@ -10,6 +9,8 @@ import {
   useState,
   useRef,
   type ButtonHTMLAttributes,
+  useCallback,
+  type HTMLAttributes,
 } from 'react';
 import { useI18n } from '@/contexts/i18n';
 import { cn } from '@/utils/cn';
@@ -22,8 +23,14 @@ import {
   DialogOverlay,
   DialogTitle,
 } from '@radix-ui/react-dialog';
+import type { SortedResult } from 'fumadocs-core/server';
+import { cva } from 'class-variance-authority';
 
 export type SearchLink = [name: string, href: string];
+
+type ReactSortedResult = SortedResult & {
+  content: ReactNode;
+};
 
 export interface SharedProps {
   open: boolean;
@@ -38,7 +45,7 @@ export interface SharedProps {
 type SearchDialogProps = SharedProps &
   SearchValueProps &
   Omit<SearchResultProps, 'items'> & {
-    results: SortedResult[] | 'empty';
+    results: ReactSortedResult[] | 'empty';
 
     footer?: ReactNode;
   };
@@ -62,7 +69,7 @@ export function SearchDialog({
   ...props
 }: SearchDialogProps) {
   const { text } = useI18n();
-  const defaultItems = useMemo<SortedResult[]>(
+  const defaultItems = useMemo<ReactSortedResult[]>(
     () =>
       links.map(([name, link]) => ({
         type: 'page',
@@ -75,7 +82,7 @@ export function SearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="fixed inset-0 z-50 bg-fd-background/50 backdrop-blur-sm data-[state=closed]:animate-fd-fade-out data-[state=open]:animate-fd-fade-in" />
+      <DialogOverlay className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm data-[state=closed]:animate-fd-fade-out data-[state=open]:animate-fd-fade-in" />
       <DialogContent
         aria-describedby={undefined}
         className="fixed left-1/2 top-[10vh] z-50 w-[98vw] max-w-screen-sm origin-left -translate-x-1/2 rounded-lg border bg-fd-popover text-fd-popover-foreground shadow-lg data-[state=closed]:animate-fd-dialog-out data-[state=open]:animate-fd-dialog-in"
@@ -152,8 +159,7 @@ function SearchList({ items, hideResults = false }: SearchResultProps) {
     setActive(items[0].id);
   }
 
-  const listenerRef = useRef<(e: KeyboardEvent) => void>();
-  listenerRef.current = (e) => {
+  function onKey(e: KeyboardEvent) {
     if (e.key === 'ArrowDown' || e.key == 'ArrowUp') {
       setActive((cur) => {
         const idx = items.findIndex((item) => item.id === cur);
@@ -173,12 +179,13 @@ function SearchList({ items, hideResults = false }: SearchResultProps) {
       if (selected) onOpen(selected.url);
       e.preventDefault();
     }
-  };
+  }
+
+  const listenerRef = useRef(onKey);
+  listenerRef.current = onKey;
 
   useEffect(() => {
-    const listener = (e: KeyboardEvent) => {
-      listenerRef.current?.(e);
-    };
+    const listener = (e: KeyboardEvent) => listenerRef.current?.(e);
 
     window.addEventListener('keydown', listener);
     return () => {
@@ -256,31 +263,94 @@ function CommandItem({
   active?: string;
   onActiveChange: (value: string) => void;
 }) {
-  const ref = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const element = ref.current;
-
-    if (active === value && element) {
-      element.scrollIntoView({
-        block: 'nearest',
-      });
-    }
-  }, [active, value]);
-
   return (
     <button
-      ref={ref}
+      ref={useCallback(
+        (element: HTMLButtonElement | null) => {
+          if (active === value && element) {
+            element.scrollIntoView({
+              block: 'nearest',
+            });
+          }
+        },
+        [active, value],
+      )}
       type="button"
       aria-selected={active === value}
       onPointerMove={() => onActiveChange(value)}
       {...props}
       className={cn(
-        'flex min-h-10 select-none flex-row items-center gap-2.5 rounded-lg px-2 text-start text-sm aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-selected:bg-fd-accent aria-selected:text-fd-accent-foreground',
+        'flex min-h-10 select-none flex-row items-center gap-2.5 rounded-lg px-2 text-start text-sm',
+        active === value && 'bg-fd-accent text-fd-accent-foreground',
         props.className,
       )}
     >
       {props.children}
     </button>
+  );
+}
+
+export interface TagItem {
+  name: string;
+  value: string | undefined;
+
+  props?: HTMLAttributes<HTMLButtonElement>;
+}
+
+export interface TagsListProps extends HTMLAttributes<HTMLDivElement> {
+  tag?: string;
+  onTagChange: (tag: string | undefined) => void;
+  allowClear?: boolean;
+
+  items: TagItem[];
+}
+
+const itemVariants = cva(
+  'rounded-md border px-2 py-0.5 text-xs font-medium text-fd-muted-foreground transition-colors',
+  {
+    variants: {
+      active: {
+        true: 'bg-fd-accent text-fd-accent-foreground',
+      },
+    },
+  },
+);
+
+export function TagsList({
+  tag,
+  onTagChange,
+  items,
+  allowClear,
+  ...props
+}: TagsListProps) {
+  return (
+    <div
+      {...props}
+      className={cn('flex flex-row items-center gap-1', props.className)}
+    >
+      {items.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          data-active={tag === item.value}
+          className={cn(
+            itemVariants({ active: tag === item.value }),
+            item.props?.className,
+          )}
+          onClick={() => {
+            if (tag === item.value && allowClear) {
+              onTagChange(undefined);
+            } else {
+              onTagChange(item.value);
+            }
+          }}
+          tabIndex={-1}
+          {...item.props}
+        >
+          {item.name}
+        </button>
+      ))}
+      {props.children}
+    </div>
   );
 }

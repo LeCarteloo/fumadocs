@@ -20,6 +20,10 @@
   --ui-color: 220deg 91% 54%;
 }
 
+body {
+  overscroll-behavior-y: none;
+}
+
 .dark {
   --headless-color: 250 100% 80%;
   --mdx-color: 0 0% 100%;

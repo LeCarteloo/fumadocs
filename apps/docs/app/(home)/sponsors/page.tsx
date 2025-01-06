@@ -1,14 +1,16 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment } from 'react';
 import Image from 'next/image';
 import {
   organizationUsers,
   organizationSponsors,
+  sponsorData,
+  sponsorTiers,
 } from '@/app/(home)/sponsors/data';
 import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/utils/cn';
-import { getSponsors } from '@/utils/get-sponsors';
+import { cn } from '@/lib/cn';
+import { getSponsors } from '@/lib/get-sponsors';
 
-export default async function Page(): Promise<ReactNode> {
+export default async function Page() {
   const sponsors = await getSponsors('fuma-nama', [
     ...organizationUsers,
     ...organizationSponsors.map((sponsor) => sponsor.github),
@@ -205,36 +207,43 @@ export default async function Page(): Promise<ReactNode> {
                   {sponsor.name}
                 </>
               ),
-              url: sponsor.websiteUrl ?? `https://github.com/${sponsor.login}`,
-              tier: '',
+              url: getSponsorHref(sponsor.login, sponsor.websiteUrl),
+              tier: sponsorData[sponsor.login] ?? '',
             })),
-        ].map((sponsor) => (
-          <a
-            key={sponsor.label}
-            href={sponsor.url}
-            rel="noreferrer noopener"
-            target="_blank"
-            className="group flex flex-col items-center justify-center rounded-xl p-3 transition-colors hover:bg-fd-primary/10"
-          >
-            <div className="inline-flex h-12 items-center gap-2 text-lg grayscale transition-all group-hover:grayscale-0">
-              {sponsor.logo}
-            </div>
-            {
-              {
-                golden: (
+        ]
+          .sort((a, b) => {
+            const idx1 = sponsorTiers.findIndex((tier) => tier.type === a.tier);
+            const idx2 = sponsorTiers.findIndex((tier) => tier.type === b.tier);
+
+            return (
+              (idx1 === -1 ? sponsorTiers.length : idx1) -
+              (idx2 === -1 ? sponsorTiers.length : idx2)
+            );
+          })
+          .map((sponsor) => {
+            const tier = sponsorTiers.find(
+              (tier) => tier.type === sponsor.tier,
+            );
+
+            return (
+              <a
+                key={sponsor.label}
+                href={sponsor.url}
+                rel="noreferrer noopener"
+                target="_blank"
+                className="group flex flex-col items-center justify-center rounded-xl p-3 transition-colors hover:bg-fd-primary/10"
+              >
+                <div className="inline-flex h-12 items-center gap-2 text-lg grayscale transition-all group-hover:grayscale-0">
+                  {sponsor.logo}
+                </div>
+                {tier ? (
                   <p className="text-xs text-fd-muted-foreground">
-                    Golden Sponsor
+                    {tier.label}
                   </p>
-                ),
-                'golden-one-time': (
-                  <p className="text-xs text-fd-muted-foreground">
-                    Golden Sponsor
-                  </p>
-                ),
-              }[sponsor.tier ?? '']
-            }
-          </a>
-        ))}
+                ) : null}
+              </a>
+            );
+          })}
       </div>
 
       <h2 className="mt-12 font-mono text-xs">Individual Sponsors</h2>
@@ -244,7 +253,7 @@ export default async function Page(): Promise<ReactNode> {
           .map((sponsor) => (
             <a
               key={sponsor.name}
-              href={sponsor.websiteUrl ?? `https://github.com/${sponsor.login}`}
+              href={getSponsorHref(sponsor.login, sponsor.websiteUrl)}
               rel="noreferrer noopener"
               target="_blank"
               className="inline-flex items-center gap-2 rounded-xl p-3 text-xs transition-colors hover:bg-fd-primary/10"
@@ -263,4 +272,10 @@ export default async function Page(): Promise<ReactNode> {
       </div>
     </main>
   );
+}
+
+function getSponsorHref(login: string, url?: string): string {
+  if (url) return url.startsWith('http') ? url : `https://${url}`;
+
+  return `https://github.com/${login}`;
 }

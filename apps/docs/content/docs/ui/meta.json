@@ -10,6 +10,7 @@
     "...",
     "---Setup---",
     "manual-installation",
+    "static-export",
     "(integrations)",
     "---Writing---",
     "markdown",
@@ -19,6 +20,6 @@
     "theme",
     "components",
     "mdx",
-    "blocks"
+    "layouts"
   ]
 }

@@ -1,5 +1,73 @@
 # next-docs-zeta
 
+## 14.7.0
+
+### Minor Changes
+
+- 97ed36c: Remove defaults from `loader` and deprecate `rootDir` options
+
+## 14.6.8
+
+## 14.6.7
+
+### Patch Changes
+
+- 5474343: Export dynamic-link
+
+## 14.6.6
+
+## 14.6.5
+
+### Patch Changes
+
+- 969da26: Improve i18n api
+
+## 14.6.4
+
+### Patch Changes
+
+- b71064a: Support remark plugins & vfile input on `getTableOfContents`
+
+## 14.6.3
+
+## 14.6.2
+
+### Patch Changes
+
+- 2357d40: Fix typings of `HighlightOptions`
+
+## 14.6.1
+
+## 14.6.0
+
+### Minor Changes
+
+- bebb16b: Add support for pre-rendering to `useShiki` hook
+- 050b326: Support codeblock `tab` meta without value
+
+### Patch Changes
+
+- 4dfde6b: support additional `components` option of Orama search
+- 4766292: Support React 19
+
+## 14.5.6
+
+### Patch Changes
+
+- 9a18c14: Downgrade Orama to v2 to fix external tokenizers
+
+## 14.5.5
+
+## 14.5.4
+
+## 14.5.3
+
+## 14.5.2
+
+## 14.5.1
+
+## 14.5.0
+
 ## 14.4.2
 
 ## 14.4.1

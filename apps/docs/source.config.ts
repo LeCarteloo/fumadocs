@@ -8,9 +8,15 @@ import {
 import { rehypeCodeDefaultOptions } from 'fumadocs-core/mdx-plugins';
 import { transformerTwoslash } from 'fumadocs-twoslash';
 import remarkMath from 'remark-math';
-import { fileGenerator, remarkDocGen, remarkInstall } from 'fumadocs-docgen';
+import {
+  fileGenerator,
+  remarkDocGen,
+  remarkInstall,
+  remarkTypeScriptToJavaScript,
+} from 'fumadocs-docgen';
 import rehypeKatex from 'rehype-katex';
 import { z } from 'zod';
+import { remarkMermaid } from '@theguild/remark-mermaid';
 
 export const { docs, meta } = defineDocs({
   docs: {
@@ -32,12 +38,13 @@ export const { docs, meta } = defineDocs({
 });
 
 export const blog = defineCollections({
+  type: 'doc',
   dir: 'content/blog',
+  async: true,
   schema: frontmatterSchema.extend({
     author: z.string(),
     date: z.string().date().or(z.date()).optional(),
   }),
-  type: 'doc',
 });
 
 export default defineConfig({
@@ -72,9 +79,11 @@ export default defineConfig({
       ],
     },
     remarkPlugins: [
+      remarkMermaid,
       remarkMath,
       [remarkInstall, { persist: { id: 'package-manager' } }],
       [remarkDocGen, { generators: [fileGenerator()] }],
+      remarkTypeScriptToJavaScript,
     ],
     rehypePlugins: (v) => [rehypeKatex, ...v],
   },

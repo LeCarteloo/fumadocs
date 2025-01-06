@@ -1,8 +1,8 @@
 import { PlusIcon } from 'lucide-react';
 import Image, { type StaticImageData } from 'next/image';
-import { cn } from '@/utils/cn';
+import { cn } from '@/lib/cn';
 import { buttonVariants } from '@/components/ui/button';
-import { createMetadata } from '@/utils/metadata';
+import { createMetadata } from '@/lib/metadata';
 import NextFAQ from '@/public/showcases/next-faq.png';
 import Yeecord from '@/public/showcases/yeecord.png';
 import Nuqs from '@/public/showcases/nuqs.jpg';
@@ -17,6 +17,7 @@ import DokPloy from '@/public/showcases/dokploy.png';
 import CodeHike from '@/public/showcases/codehike.png';
 import Expostarter from '@/public/showcases/expostarter.png';
 import Sunar from '@/public/showcases/sunar.png';
+import OpenPanel from '@/public/showcases/openpanel.png';
 import Supastarter from '@/public/showcases/supastarter.png';
 import BetterAuth from '@/public/showcases/better-auth.png';
 import LaunchFast from '@/public/showcases/launchfast.png';
@@ -74,6 +75,11 @@ export default function Showcase(): React.ReactElement {
       url: 'https://better-auth.com',
     },
     {
+      image: OpenPanel,
+      name: 'OpenPanel',
+      url: 'https://openpanel.dev',
+    },
+    {
       image: FrameGround,
       name: 'FrameGround',
       url: 'https://docs.frameground.tech',
@@ -124,6 +130,10 @@ export default function Showcase(): React.ReactElement {
       image: LaunchFast,
       name: 'LaunchFast',
       url: 'https://www.launchfa.st',
+    },
+    {
+      name: 'Swellchain',
+      url: 'https://build.swellnetwork.io',
     },
   ];
 

@@ -1,5 +1,23 @@
 # fumadocs
 
+## 0.0.6
+
+### Patch Changes
+
+- 969da26: Improve i18n api
+
+## 0.0.5
+
+### Patch Changes
+
+- c8d9b08: support Next.js 15 i18n auto-config
+
+## 0.0.4
+
+### Patch Changes
+
+- b254ec2: Fix Windows path problems
+
 ## 0.0.3
 
 ### Patch Changes

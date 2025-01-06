@@ -6,6 +6,8 @@ description:
 preview: tabs
 ---
 
+import { UrlBar, WithoutValueTest } from './tabs.client';
+
 ## Usage
 
 Import it in your MDX documents.
@@ -18,6 +20,28 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
   <Tab value="Rust">Rust is fast</Tab>
 </Tabs>
 ```
+
+### Without `value`
+
+Without a `value`, it detects from the children index. Note that it might cause errors on re-renders, it's not encouraged if the tabs might change.
+
+```mdx
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs items={['Javascript', 'Rust']}>
+  <Tab>Javascript is weird</Tab>
+  <Tab>Rust is fast</Tab>
+</Tabs>
+```
+
+#### Demo with Re-renders
+
+<Tabs items={['Javascript', 'Rust']}>
+  <Tab>Javascript is weird</Tab>
+  <Tab>Rust is fast</Tab>
+</Tabs>
+
+<WithoutValueTest />
 
 ### Shared Value
 
@@ -77,6 +101,34 @@ You can add the hash `#tab-cpp` to your URL and reload, the C++ tab will be acti
   <Tab value="Rust">Rust is fast</Tab>
   <Tab id="tab-cpp" value="C++">
     `Hello World`
+  </Tab>
+</Tabs>
+
+Additionally, the `updateAnchor` property can be set to `true` in the `Tabs` component
+to automatically update the URL hash whenever time a new tab is selected:
+
+```mdx
+<Tabs items={['Javascript', 'Rust', 'C++']} updateAnchor>
+  <Tab id="tab-js" value="Javascript">
+    Javascript is weird
+  </Tab>
+  <Tab id="tab-rs" value="Rust">
+    Rust is fast
+  </Tab>
+  <Tab id="tab-cpp" value="C++">
+    `Hello World`
+  </Tab>
+</Tabs>
+```
+
+<UrlBar />
+
+<Tabs items={['Hello', 'World']} updateAnchor>
+  <Tab id="tab-hello" value="Hello">
+    Hello!
+  </Tab>
+  <Tab id="tab-world" value="World">
+    World!
   </Tab>
 </Tabs>
 
